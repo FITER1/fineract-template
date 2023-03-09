@@ -31,6 +31,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.fineract.infrastructure.core.domain.AbstractAuditableCustom;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
@@ -511,6 +512,44 @@ public final class LoanRepaymentScheduleInstallment extends AbstractAuditableCus
         return interestPortionOfTransaction;
     }
 
+    public Pair<Money, Money> payInterestAndVatComponents(final LocalDate transactionDate, final Money transactionAmountRemaining,
+            final BigDecimal vatPercentage) {
+
+        final MonetaryCurrency currency = transactionAmountRemaining.getCurrency();
+        Money interestPortionOfTransaction = Money.zero(currency);
+        Money vatOnInterestPortionOfTransaction = Money.zero(currency);
+
+        final Money interestDue = getInterestOutstanding(currency);
+        final Money vatOnInterestDue = getVatOnInterestOutstanding(currency);
+
+        final Money interestDueAndVat = interestDue.plus(vatOnInterestDue);
+
+        if (transactionAmountRemaining.isGreaterThanOrEqualTo(interestDueAndVat)) {
+            this.interestPaid = getInterestPaid(currency).plus(interestDue).getAmount();
+            this.vatOnInterestPaid = getVatOnInterestPaid(currency).plus(vatOnInterestDue).getAmount();
+            interestPortionOfTransaction = interestPortionOfTransaction.plus(interestDue);
+            vatOnInterestPortionOfTransaction = vatOnInterestPortionOfTransaction.plus(vatOnInterestDue);
+        } else {
+            BigDecimal percentageVatPlusOne = vatPercentage.add(BigDecimal.ONE);
+            BigDecimal interestPort = transactionAmountRemaining.getAmount().divide(percentageVatPlusOne);
+            BigDecimal vatPortion = transactionAmountRemaining.getAmount().subtract(interestPort);
+
+            this.interestPaid = getInterestPaid(currency).plus(interestPort).getAmount();
+            this.vatOnInterestPaid = getVatOnInterestPaid(currency).plus(vatPortion).getAmount();
+            interestPortionOfTransaction = interestPortionOfTransaction.plus(interestPort);
+            vatOnInterestPortionOfTransaction = vatOnInterestPortionOfTransaction.plus(vatPortion);
+        }
+
+        this.interestPaid = defaultToNullIfZero(this.interestPaid);
+        this.vatOnInterestPaid = defaultToNullIfZero(this.vatOnInterestPaid);
+
+        checkIfRepaymentPeriodObligationsAreMet(transactionDate, currency);
+
+        trackAdvanceAndLateTotalsForRepaymentPeriod(transactionDate, currency, interestPortionOfTransaction);
+
+        return Pair.of(interestPortionOfTransaction, vatOnInterestPortionOfTransaction);
+    }
+
     public Money payPrincipalComponent(final LocalDate transactionDate, final Money transactionAmountRemaining) {
 
         final MonetaryCurrency currency = transactionAmountRemaining.getCurrency();
@@ -637,7 +676,8 @@ public final class LoanRepaymentScheduleInstallment extends AbstractAuditableCus
     }
 
     public void updateChargePortion(final Money feeChargesDue, final Money feeChargesWaived, final Money feeChargesWrittenOff,
-            final Money penaltyChargesDue, final Money penaltyChargesWaived, final Money penaltyChargesWrittenOff) {
+            final Money penaltyChargesDue, final Money penaltyChargesWaived, final Money penaltyChargesWrittenOff,
+            final Money chargeAmountDueForVatCalculation) {
         this.feeChargesCharged = defaultToNullIfZero(feeChargesDue.getAmount());
         this.feeChargesWaived = defaultToNullIfZero(feeChargesWaived.getAmount());
         this.feeChargesWrittenOff = defaultToNullIfZero(feeChargesWrittenOff.getAmount());
@@ -972,7 +1012,9 @@ public final class LoanRepaymentScheduleInstallment extends AbstractAuditableCus
     }
 
     public Money getVatOnInterestOutstanding(final MonetaryCurrency currency) {
-        return Money.of(currency, this.vatOnInterestOutstanding);
+        final Money vatOnInterestAccountedFor = getVatOnInterestPaid(currency).plus(getVatOnInterestWaived(currency))
+                .plus(getVatOnInterestWrittenOff(currency));
+        return getVatOnInterestCharged(currency).minus(vatOnInterestAccountedFor);
     }
 
     public Money getVatOnInterestOverdue(final MonetaryCurrency currency) {
@@ -996,10 +1038,60 @@ public final class LoanRepaymentScheduleInstallment extends AbstractAuditableCus
     }
 
     public Money getVatOnChargeOutstanding(final MonetaryCurrency currency) {
-        return Money.of(currency, this.vatOnChargeOutstanding);
+        final Money vatOnChargeAccountedFor = getVatOnChargePaid(currency).plus(getVatOnChargeWaived(currency))
+                .plus(getVatOnChargeWrittenOff(currency));
+        return getVatOnChargeExpected(currency).minus(vatOnChargeAccountedFor);
     }
 
     public Money getVatOnChargeOverdue(final MonetaryCurrency currency) {
         return Money.of(currency, this.vatOnChargeOverdue);
+    }
+
+    public void setVatOnInterestCharged(BigDecimal vatOnInterestCharged) {
+        this.vatOnInterestCharged = vatOnInterestCharged;
+    }
+
+    public void setVatOnInterestPaid(BigDecimal vatOnInterestPaid) {
+        this.vatOnInterestPaid = vatOnInterestPaid;
+    }
+
+    public void setVatOnInterestWrittenOff(BigDecimal vatOnInterestWrittenOff) {
+        this.vatOnInterestWrittenOff = vatOnInterestWrittenOff;
+    }
+
+    public void setVatOnInterestWaived(BigDecimal vatOnInterestWaived) {
+        this.vatOnInterestWaived = vatOnInterestWaived;
+    }
+
+    public void setVatOnInterestOutstanding(BigDecimal vatOnInterestOutstanding) {
+        this.vatOnInterestOutstanding = vatOnInterestOutstanding;
+    }
+
+    public void setVatOnInterestOverdue(BigDecimal vatOnInterestOverdue) {
+        this.vatOnInterestOverdue = vatOnInterestOverdue;
+    }
+
+    public void setVatOnChargeExpected(BigDecimal vatOnChargeExpected) {
+        this.vatOnChargeExpected = vatOnChargeExpected;
+    }
+
+    public void setVatOnChargePaid(BigDecimal vatOnChargePaid) {
+        this.vatOnChargePaid = vatOnChargePaid;
+    }
+
+    public void setVatOnChargeWrittenOff(BigDecimal vatOnChargeWrittenOff) {
+        this.vatOnChargeWrittenOff = vatOnChargeWrittenOff;
+    }
+
+    public void setVatOnChargeWaived(BigDecimal vatOnChargeWaived) {
+        this.vatOnChargeWaived = vatOnChargeWaived;
+    }
+
+    public void setVatOnChargeOutstanding(BigDecimal vatOnChargeOutstanding) {
+        this.vatOnChargeOutstanding = vatOnChargeOutstanding;
+    }
+
+    public void setVatOnChargeOverdue(BigDecimal vatOnChargeOverdue) {
+        this.vatOnChargeOverdue = vatOnChargeOverdue;
     }
 }
