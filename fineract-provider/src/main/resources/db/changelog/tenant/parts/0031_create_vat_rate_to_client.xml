@@ -250,7 +250,7 @@
     </changeSet>
 
 
-    <changeSet id="fineract" author="12">
+    <changeSet id="12" author="fineract">
         <addColumn tableName="m_loan_transaction">
             <column name="vat_on_interest_portion" type="DECIMAL(19, 6)">
                 <constraints nullable="true"/>
