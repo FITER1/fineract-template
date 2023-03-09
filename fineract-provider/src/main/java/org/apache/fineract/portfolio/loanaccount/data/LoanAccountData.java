@@ -1971,7 +1971,7 @@ public final class LoanAccountData {
     public void setInterestRateCharts(Collection<InterestRateChartData> interestRateCharts) {
         if (interestRateCharts != null && interestRateCharts.size() > 0) {
             for (InterestRateChartData chartData : interestRateCharts) {
-                if(chartData.chartSlabs().size() > 0){
+                if(chartData.chartSlabs()!=null && !chartData.chartSlabs().isEmpty()){
                     this.interestRateChartSlabData = chartData.chartSlabs();
                 }
             }
