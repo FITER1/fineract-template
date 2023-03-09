@@ -124,11 +124,19 @@ public class FineractStyleLoanRepaymentScheduleTransactionProcessor extends Abst
             }
             loanTransaction.updateComponents(principalPortion, interestPortion, feeChargesPortion, penaltyChargesPortion);
         } else {
-            penaltyChargesPortion = currentInstallment.payPenaltyChargesComponent(transactionDate, transactionAmountRemaining);
+            Pair<Money, Money> payPenaltyChargesAndVat = currentInstallment.payPenaltyChargesAndVatComponent(transactionDate,
+                    transactionAmountRemaining, BigDecimal.valueOf(vatPercentage));
+            penaltyChargesPortion = payPenaltyChargesAndVat.getLeft();
             transactionAmountRemaining = transactionAmountRemaining.minus(penaltyChargesPortion);
 
-            feeChargesPortion = currentInstallment.payFeeChargesComponent(transactionDate, transactionAmountRemaining);
+            Pair<Money, Money> payFeeChargesAndVatComponent = currentInstallment.payFeeChargesAndVatComponent(transactionDate,
+                    transactionAmountRemaining, BigDecimal.valueOf(vatPercentage));
+            feeChargesPortion = payFeeChargesAndVatComponent.getLeft();
             transactionAmountRemaining = transactionAmountRemaining.minus(feeChargesPortion);
+
+            // penalties and fees vat
+            vatOnChargesChargesPortion = payPenaltyChargesAndVat.getRight().plus(payFeeChargesAndVatComponent.getRight());
+            transactionAmountRemaining = transactionAmountRemaining.minus(vatOnChargesChargesPortion);
 
             Pair<Money, Money> interestAndVatPortions = currentInstallment.payInterestAndVatComponents(transactionDate,
                     transactionAmountRemaining, BigDecimal.valueOf(vatPercentage));
