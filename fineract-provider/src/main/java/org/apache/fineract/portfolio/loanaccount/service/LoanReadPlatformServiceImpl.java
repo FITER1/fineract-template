@@ -1163,6 +1163,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService {
             Money totalInterestCharged = Money.zero(monCurrency);
             Money totalFeeChargesCharged = Money.zero(monCurrency);
             Money totalPenaltyChargesCharged = Money.zero(monCurrency);
+
             Money totalWaived = Money.zero(monCurrency);
             Money totalWrittenOff = Money.zero(monCurrency);
             Money totalRepaymentExpected = Money.zero(monCurrency);
@@ -1265,6 +1266,18 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService {
                 final BigDecimal penaltyChargesWaived = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "penaltyChargesWaived");
                 final BigDecimal penaltyChargesWrittenOff = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "penaltyChargesWrittenOff");
 
+                // vat on charges
+                final BigDecimal vatOnChargesPaid = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "vatOnChargesPaid");
+                final BigDecimal vatOnChargesWaived = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "vatOnChargesWaived");
+                final BigDecimal vatOnChargesWrittenOff = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "vatOnChargesWrittenOff");
+                final BigDecimal vatOnChargesOutstanding = vatOnCharges.subtract(vatOnChargesPaid);
+
+                // vat on interest
+                final BigDecimal vatOnInterestPaid = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "vatOnInterestPaid");
+                final BigDecimal vatOnInterestWaived = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "vatOnInterestWaived");
+                final BigDecimal vatOnInterestWrittenOff = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "vatOnInterestWrittenOff");
+                final BigDecimal vatOnInterestOutstanding = vatOnInterest.subtract(vatOnInterestPaid);
+
                 final BigDecimal totalPaidInAdvanceForPeriod = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs,
                         "totalPaidInAdvanceForPeriod");
                 final BigDecimal totalPaidLateForPeriod = JdbcSupport.getBigDecimalDefaultToZeroIfNull(rs, "totalPaidLateForPeriod");
@@ -1277,14 +1290,17 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService {
                         .add(penaltyChargesExpectedDue).add(vatOnCharges).add(vatOnInterest);
 
                 final BigDecimal totalDueForPeriod = principalDue.add(totalExpectedCostOfLoanForPeriod);
-                final BigDecimal totalPaidForPeriod = principalPaid.add(interestPaid).add(feeChargesPaid).add(penaltyChargesPaid);
-                final BigDecimal totalWaivedForPeriod = interestWaived.add(feeChargesWaived).add(penaltyChargesWaived);
+                final BigDecimal totalPaidForPeriod = principalPaid.add(interestPaid).add(feeChargesPaid).add(penaltyChargesPaid)
+                        .add(vatOnChargesPaid).add(vatOnInterestPaid);
+
+                final BigDecimal totalWaivedForPeriod = interestWaived.add(feeChargesWaived).add(penaltyChargesWaived)
+                        .add(vatOnChargesWaived).add(vatOnInterestWaived);
                 totalWaived = totalWaived.plus(totalWaivedForPeriod);
                 final BigDecimal totalWrittenOffForPeriod = principalWrittenOff.add(interestWrittenOff).add(feeChargesWrittenOff)
-                        .add(penaltyChargesWrittenOff);
+                        .add(penaltyChargesWrittenOff).add(vatOnChargesWrittenOff).add(vatOnInterestWrittenOff);
                 totalWrittenOff = totalWrittenOff.plus(totalWrittenOffForPeriod);
                 final BigDecimal totalOutstandingForPeriod = principalOutstanding.add(interestOutstanding).add(feeChargesOutstanding)
-                        .add(penaltyChargesOutstanding).add(vatOnCharges).add(vatOnInterest);
+                        .add(penaltyChargesOutstanding).add(vatOnChargesOutstanding).add(vatOnInterestOutstanding);
 
                 final BigDecimal totalActualCostOfLoanForPeriod = interestActualDue.add(feeChargesActualDue).add(penaltyChargesActualDue);
 
