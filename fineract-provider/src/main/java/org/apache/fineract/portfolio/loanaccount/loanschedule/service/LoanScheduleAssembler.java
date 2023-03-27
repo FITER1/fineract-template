@@ -170,15 +170,15 @@ public class LoanScheduleAssembler {
         this.loanUtilService = loanUtilService;
     }
 
-    public LoanApplicationTerms assembleLoanTerms(final JsonElement element) {
+    public LoanApplicationTerms assembleLoanTerms(final JsonElement element, Loan loan) {
         final Long loanProductId = this.fromApiJsonHelper.extractLongNamed("productId", element);
 
         final LoanProduct loanProduct = this.loanProductRepository.findById(loanProductId)
                 .orElseThrow(() -> new LoanProductNotFoundException(loanProductId));
-        return assembleLoanApplicationTermsFrom(element, loanProduct);
+        return assembleLoanApplicationTermsFrom(element, loanProduct, loan);
     }
 
-    private LoanApplicationTerms assembleLoanApplicationTermsFrom(final JsonElement element, final LoanProduct loanProduct) {
+    private LoanApplicationTerms assembleLoanApplicationTermsFrom(final JsonElement element, final LoanProduct loanProduct, Loan loan) {
 
         final MonetaryCurrency currency = loanProduct.getCurrency();
         final ApplicationCurrency applicationCurrency = this.applicationCurrencyRepository.findOneWithNotFoundDetection(currency);
@@ -451,19 +451,6 @@ public class LoanScheduleAssembler {
             isVatRequired = Boolean.FALSE;
         }
 
-        // calculate effective annual interest rate
-        BigDecimal effectInterestAmount = this.loanUtilService.calculateEffectiveRate(interestRatePerPeriod).setScale(2,
-                MoneyHelper.getRoundingMode());
-
-        // if VAT is required, then calculates the effective annual rate with VAT
-        BigDecimal effectInterestAmountWithVat = BigDecimal.ZERO;
-        if (isVatRequired && client != null && client.getVatRate() != null && client.getVatRate().getPercentage() % 1 == 0) {
-            double vatPercentage = client.getVatRate().getPercentage();
-            effectInterestAmountWithVat = this.loanUtilService
-                    .calculateEffectiveRateWithVat(interestRatePerPeriod, BigDecimal.valueOf(vatPercentage))
-                    .setScale(2, MoneyHelper.getRoundingMode());
-        }
-
         final boolean isHolidayEnabled = this.configurationDomainService.isRescheduleRepaymentsOnHolidaysEnabled();
         final List<Holiday> holidays = this.holidayRepository.findByOfficeIdAndGreaterThanDate(officeId, expectedDisbursementDate,
                 HolidayStatusType.ACTIVE.getValue());
@@ -475,6 +462,9 @@ public class LoanScheduleAssembler {
                 .isPrincipalCompoundingDisabledForOverdueLoans();
 
         Money principalAndOriginalFees = principalMoney;
+        if (loan != null) {
+            principalAndOriginalFees = principalAndOriginalFees.plus(loan.deriveTotalOriginationFees());
+        }
 
         return LoanApplicationTerms.assembleFrom(applicationCurrency, loanTermFrequency, loanTermPeriodFrequencyType, numberOfRepayments,
                 repaymentEvery, repaymentPeriodFrequencyType, nthDay, weekDayType, amortizationMethod, interestMethod,
@@ -623,13 +613,13 @@ public class LoanScheduleAssembler {
     }
 
     public LoanProductRelatedDetail assembleLoanProductRelatedDetail(final JsonElement element) {
-        final LoanApplicationTerms loanApplicationTerms = assembleLoanTerms(element);
+        final LoanApplicationTerms loanApplicationTerms = assembleLoanTerms(element, null);
         return loanApplicationTerms.toLoanProductRelatedDetail();
     }
 
     public LoanScheduleModel assembleLoanScheduleFrom(final JsonElement element) {
         // This method is getting called from calculate loan schedule.
-        final LoanApplicationTerms loanApplicationTerms = assembleLoanTerms(element);
+        final LoanApplicationTerms loanApplicationTerms = assembleLoanTerms(element, null);
         // Get holiday details
         final boolean isHolidayEnabled = this.configurationDomainService.isRescheduleRepaymentsOnHolidaysEnabled();
 

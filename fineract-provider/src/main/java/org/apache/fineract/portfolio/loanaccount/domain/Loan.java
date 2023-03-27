@@ -60,6 +60,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 import javax.persistence.Version;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -5655,7 +5656,7 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
         DayOfWeekType dayOfWeekType = null;
 
         // check for any disbursement charges
-        final Money originationCharges = deriveTotalOriginationFees(this.getCurrency());
+        final Money originationCharges = this.deriveTotalOriginationFees();
 
         final List<DisbursementData> disbursementData = new ArrayList<>();
         for (LoanDisbursementDetails disbursementDetails : this.disbursementDetails) {
@@ -5722,14 +5723,16 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
         return loanApplicationTerms;
     }
 
-    private Money deriveTotalOriginationFees(MonetaryCurrency currency) {
+    public Money deriveTotalOriginationFees() {
         BigDecimal chargesDueAtTimeOfDisbursement = BigDecimal.ZERO;
-        for (final LoanCharge loanCharge : this.charges) {
-            if (loanCharge.isOriginationFee()) {
-                chargesDueAtTimeOfDisbursement = chargesDueAtTimeOfDisbursement.add(loanCharge.amount());
+        if (CollectionUtils.isNotEmpty(this.charges)) {
+            for (final LoanCharge loanCharge : this.charges) {
+                if (loanCharge.isOriginationFee()) {
+                    chargesDueAtTimeOfDisbursement = chargesDueAtTimeOfDisbursement.add(loanCharge.amount());
+                }
             }
         }
-        return Money.of(currency, chargesDueAtTimeOfDisbursement);
+        return Money.of(this.getCurrency(), chargesDueAtTimeOfDisbursement);
     }
 
     public BigDecimal constructLoanTermVariations(FloatingRateDTO floatingRateDTO, BigDecimal annualNominalInterestRate,

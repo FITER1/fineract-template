@@ -458,13 +458,13 @@ public final class LoanApplicationTerms {
 
         Money adjusted = principalForPeriod;
 
-        final Money totalPrincipalRemaining = this.principal.minus(totalCumulativePrincipalToDate);
+        final Money totalPrincipalRemaining = this.principalAndOriginationFees.minus(totalCumulativePrincipalToDate);
         if (totalPrincipalRemaining.isLessThanZero()) {
             // paid too much principal, subtract amount that overpays from
             // principal paid for period.
             adjusted = principalForPeriod.minus(totalPrincipalRemaining.abs());
         } else if (this.actualFixedEmiAmount != null) {
-            final Money difference = this.principal.minus(totalCumulativePrincipalToDate);
+            final Money difference = this.principalAndOriginationFees.minus(totalCumulativePrincipalToDate);
             final Money principalThreshold = principalForPeriod.multipliedBy(this.principalThresholdForLastInstalment).dividedBy(100,
                     MoneyHelper.getRoundingMode());
             if (difference.isLessThan(principalThreshold)) {
@@ -472,7 +472,7 @@ public final class LoanApplicationTerms {
             }
         } else if (isLastRepaymentPeriod(this.actualNumberOfRepayments, periodNumber)) {
 
-            final Money difference = totalCumulativePrincipalToDate.minus(this.principal);
+            final Money difference = totalCumulativePrincipalToDate.minus(this.principalAndOriginationFees);
             if (difference.isLessThanZero()) {
                 adjusted = principalForPeriod.plus(difference.abs());
             } else if (difference.isGreaterThanZero()) {

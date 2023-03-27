@@ -275,6 +275,7 @@ public class LoanAssembler {
                 }
             }
         }
+
         BigDecimal fixedPrincipalPercentagePerInstallment = fromApiJsonHelper
                 .extractBigDecimalWithLocaleNamed(LoanApiConstants.fixedPrincipalPercentagePerInstallmentParamName, element);
 
@@ -364,15 +365,9 @@ public class LoanAssembler {
             }
         }
 
-        final LoanApplicationTerms loanApplicationTerms = this.loanScheduleAssembler.assembleLoanTerms(element);
-
-        BigDecimal originationFees = BigDecimal.ZERO;
-        for (final LoanCharge loanCharge : loanCharges) {
-            if (loanCharge.isOriginationFee()) {
-                originationFees = originationFees.add(loanCharge.amount());
-            }
-        }
-        loanApplicationTerms.setPrincipalAndOriginationFees(loanApplicationTerms.getPrincipal().plus(originationFees));
+        final LoanApplicationTerms loanApplicationTerms = this.loanScheduleAssembler.assembleLoanTerms(element, loanApplication);
+        loanApplicationTerms
+                .setPrincipalAndOriginationFees(loanApplicationTerms.getPrincipal().plus(loanApplication.deriveTotalOriginationFees()));
 
         final boolean isHolidayEnabled = this.configurationDomainService.isRescheduleRepaymentsOnHolidaysEnabled();
         final List<Holiday> holidays = this.holidayRepository.findByOfficeIdAndGreaterThanDate(loanApplication.getOfficeId(),

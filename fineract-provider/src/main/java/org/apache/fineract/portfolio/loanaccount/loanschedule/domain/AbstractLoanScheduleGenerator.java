@@ -1294,7 +1294,7 @@ public abstract class AbstractLoanScheduleGenerator implements LoanScheduleGener
         if (loanApplicationTerms.isMultiDisburseLoan() && loanApplicationTerms.getApprovedPrincipal().isGreaterThanZero()) {
             principalToBeScheduled = loanApplicationTerms.getApprovedPrincipal();
         } else {
-            principalToBeScheduled = loanApplicationTerms.getPrincipal();
+            principalToBeScheduled = loanApplicationTerms.getPrincipalAndOriginationFees();
         }
         return principalToBeScheduled;
     }
