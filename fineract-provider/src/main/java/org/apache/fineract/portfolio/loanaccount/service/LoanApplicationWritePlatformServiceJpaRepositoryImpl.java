@@ -356,9 +356,6 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
 
             validateSubmittedOnDate(newLoanApplication);
 
-            // update calculations for schedule installments
-            updateLoanInstallmentsAmounts(newLoanApplication);
-
             final LoanProductRelatedDetail productRelatedDetail = newLoanApplication.repaymentScheduleDetail();
 
             if (loanProduct.getLoanProductConfigurableAttributes() != null) {
@@ -1326,10 +1323,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                 officeSpecificLoanProductValidation(existingLoanApplication.getLoanProduct().getId(), OfficeId);
             }
 
-            // update calculations for schedule installments
-            updateLoanInstallmentsAmounts(existingLoanApplication);
-
-            // CAT calculation with/without VAT
+            // TODO CAT calculation with/without VAT
             existingLoanApplication.setCatRate(loanUtilService.getCalculatedCatRate(existingLoanApplication, false));
             if (existingLoanApplication.isVatRequired()) {
                 existingLoanApplication.setCatRateWithVat(
@@ -1579,9 +1573,6 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                 BigDecimal netDisbursalAmount = loan.getApprovedPrincipal().subtract(loanOutstanding);
                 loan.adjustNetDisbursalAmount(netDisbursalAmount);
             }
-
-            // update calculations for schedule installments
-            updateLoanInstallmentsAmounts(loan);
 
             saveAndFlushLoanWithDataIntegrityViolationChecks(loan);
 
@@ -1899,6 +1890,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         }
     }
 
+    @SuppressWarnings("unused")
     private void updateLoanInstallmentsAmounts(Loan loan) {
         // Get the total installments for this loan
         BigDecimal totalInstallmentsForLoan = loanUtilService.calculateTotalInstallmentWithVat(loan).setScale(2, RoundingMode.HALF_UP);
