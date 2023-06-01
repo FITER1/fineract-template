@@ -3332,7 +3332,7 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
             }
         }
         if (reprocess) {
-            if (this.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
+            if (this.repaymentScheduleDetail().isInterestRecalculationEnabled() && !isForeclosure()) {
                 regenerateRepaymentScheduleWithInterestRecalculation(scheduleGeneratorDTO);
             }
             final List<LoanTransaction> allNonContraTransactionsPostDisbursement = retreiveListOfTransactionsPostDisbursement();
@@ -6652,12 +6652,6 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
     }
 
     public void validateForForeclosure(final LocalDate transactionDate) {
-
-        if (isInterestRecalculationEnabledForProduct()) {
-            final String defaultUserMessage = "The loan with interest recalculation enabled cannot be foreclosed.";
-            throw new LoanForeclosureException("loan.with.interest.recalculation.enabled.cannot.be.foreclosured", defaultUserMessage,
-                    getId());
-        }
 
         LocalDate lastUserTransactionDate = getLastUserTransactionDate();
 
