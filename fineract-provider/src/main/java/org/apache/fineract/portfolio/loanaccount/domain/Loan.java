@@ -3463,7 +3463,7 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
 
         boolean isAllChargesPaid = true;
         for (final LoanCharge loanCharge : this.charges) {
-            if (loanCharge.isOriginationFee()) continue;
+            if (loanCharge.isOriginationFee() || transactionDate.isEqual(this.actualDisbursementDate)) continue;
 
             if (loanCharge.isActive() && loanCharge.amount().compareTo(BigDecimal.ZERO) > 0
                     && !(loanCharge.isPaid() || loanCharge.isWaived())) {
@@ -6451,6 +6451,20 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
                 paidFromFutureInstallments = paidFromFutureInstallments.plus(installment.getInterestPaid(currency))
                         .plus(installment.getPenaltyChargesPaid(currency)).plus(installment.getFeeChargesPaid(currency))
                         .plus(installment.getVatOnChargePaid(currency)).plus(installment.getVatOnInterestPaid(currency));
+
+                if (this.actualDisbursementDate.isEqual(paymentDate)) {
+                    if (installment.getInstallmentNumber().doubleValue() == 1) {
+                        int totalPeriodDays = Math.toIntExact(ChronoUnit.DAYS.between(installment.getFromDate(), installment.getDueDate()));
+                        Money interestForDisbursementDate = Money.of(getCurrency(), BigDecimal.valueOf(
+                                calculateInterestForDays(totalPeriodDays, installment.getInterestCharged(getCurrency()).getAmount(), 1)));
+                        interest = interest.plus(interestForDisbursementDate);
+
+                        if (this.isVatRequired) {
+                            vatOnInterest = vatOnInterest.plus(Money.of(getCurrency(),
+                                    LoanCharge.percentageOf(interestForDisbursementDate.getAmount(), this.vatPercentage)));
+                        }
+                    }
+                }
             }
 
         }
@@ -6544,6 +6558,12 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
                 break;
             } else if (installment.getDueDate().isAfter(paymentDate) && installment.getFromDate().isBefore(paymentDate)) {
                 balances = fetchInterestFeeAndPenaltyTillDate(paymentDate, currency, installment);
+                break;
+            } else if (this.actualDisbursementDate.isEqual(paymentDate) && installment.getInstallmentNumber().doubleValue() == 1) {
+                int totalPeriodDays = Math.toIntExact(ChronoUnit.DAYS.between(installment.getFromDate(), installment.getDueDate()));
+                BigDecimal interestForDisbursementDate = BigDecimal
+                        .valueOf(calculateInterestForDays(totalPeriodDays, installment.getInterestCharged(getCurrency()).getAmount(), 1));
+                balances[0] = Money.of(currency, interestForDisbursementDate);
                 break;
             }
         }
