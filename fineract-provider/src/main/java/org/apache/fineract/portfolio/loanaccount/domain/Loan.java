@@ -3463,7 +3463,9 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
 
         boolean isAllChargesPaid = true;
         for (final LoanCharge loanCharge : this.charges) {
-            if (loanCharge.isOriginationFee() || transactionDate.isEqual(this.actualDisbursementDate)) continue;
+            if (loanCharge.isOriginationFee() || (transactionDate.isEqual(this.actualDisbursementDate)
+                    && this.interestChargedFromDate.isAfter(actualDisbursementDate)))
+                continue;
 
             if (loanCharge.isActive() && loanCharge.amount().compareTo(BigDecimal.ZERO) > 0
                     && !(loanCharge.isPaid() || loanCharge.isWaived())) {
@@ -6452,7 +6454,7 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
                         .plus(installment.getPenaltyChargesPaid(currency)).plus(installment.getFeeChargesPaid(currency))
                         .plus(installment.getVatOnChargePaid(currency)).plus(installment.getVatOnInterestPaid(currency));
 
-                if (this.actualDisbursementDate.isEqual(paymentDate)) {
+                if (this.actualDisbursementDate.isEqual(paymentDate) && this.interestChargedFromDate.isAfter(actualDisbursementDate)) {
                     if (installment.getInstallmentNumber().doubleValue() == 1) {
                         int totalPeriodDays = Math.toIntExact(ChronoUnit.DAYS.between(installment.getFromDate(), installment.getDueDate()));
                         Money interestForDisbursementDate = Money.of(getCurrency(), BigDecimal.valueOf(
@@ -6559,7 +6561,8 @@ public class Loan extends AbstractAuditableWithUTCDateTimeCustom {
             } else if (installment.getDueDate().isAfter(paymentDate) && installment.getFromDate().isBefore(paymentDate)) {
                 balances = fetchInterestFeeAndPenaltyTillDate(paymentDate, currency, installment);
                 break;
-            } else if (this.actualDisbursementDate.isEqual(paymentDate) && installment.getInstallmentNumber().doubleValue() == 1) {
+            } else if (this.actualDisbursementDate.isEqual(paymentDate) && this.interestChargedFromDate.isAfter(actualDisbursementDate)
+                    && installment.getInstallmentNumber().doubleValue() == 1) {
                 int totalPeriodDays = Math.toIntExact(ChronoUnit.DAYS.between(installment.getFromDate(), installment.getDueDate()));
                 BigDecimal interestForDisbursementDate = BigDecimal
                         .valueOf(calculateInterestForDays(totalPeriodDays, installment.getInterestCharged(getCurrency()).getAmount(), 1));
