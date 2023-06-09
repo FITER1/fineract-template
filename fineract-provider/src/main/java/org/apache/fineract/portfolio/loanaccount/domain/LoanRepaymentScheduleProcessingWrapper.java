@@ -44,6 +44,10 @@ public class LoanRepaymentScheduleProcessingWrapper {
         LocalDate startDate = disbursementDate;
         for (final LoanRepaymentScheduleInstallment period : repaymentPeriods) {
 
+            if (disbursementDate.isEqual(period.getDueDate())) {
+                continue;
+            }
+
             if (loan.isVatRequired()) {
 
                 final Pair<Money, Money> cumulativeFeeChargesDueWithin = cumulativeFeeChargesDueWithin(startDate, period.getDueDate(),
