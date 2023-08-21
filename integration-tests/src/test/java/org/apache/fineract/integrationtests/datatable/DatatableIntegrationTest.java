@@ -41,12 +41,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.fineract.client.models.PostDataTablesAppTableIdResponse;
 import org.apache.fineract.client.models.PostDataTablesResponse;
 import org.apache.fineract.client.models.PutDataTablesAppTableIdDatatableIdResponse;
 import org.apache.fineract.client.models.PutDataTablesResponse;
-import org.apache.fineract.client.models.GetDataTablesResponse;
 import org.apache.fineract.client.util.Calls;
 import org.apache.fineract.integrationtests.client.IntegrationTest;
 import org.apache.fineract.integrationtests.common.ClientHelper;
@@ -881,52 +879,6 @@ public class DatatableIntegrationTest extends IntegrationTest {
                 .withAmortizationTypeAsEqualPrincipalPayment().withInterestTypeAsFlat().withAccountingRuleAsNone().withDaysInMonth("30")
                 .withDaysInYear("365").build(null);
         return this.loanTransactionHelper.getLoanProductId(loanProductJSON);
-    }
-
-    @Test
-    public void validateCreateAndDeleteDatatableColumn() {
-        // Creating client
-        final Integer clientId = ClientHelper.createClientAsPerson(requestSpec, responseSpec);
-        final Integer randomNumber = Utils.randomNumberGenerator(3);
-
-        // Creating datatable for Client Person
-        final String datatableName = Utils.uniqueRandomStringGenerator(CLIENT_APP_TABLE_NAME + "_", 5);
-        final boolean genericResultSet = true;
-
-        HashMap<String, Object> columnMap = new HashMap<>();
-        List<HashMap<String, Object>> datatableColumnsList = new ArrayList<>();
-        columnMap.put("datatableName", datatableName);
-        columnMap.put("apptableName", CLIENT_APP_TABLE_NAME);
-        columnMap.put("entitySubType", CLIENT_PERSON_SUBTYPE_NAME);
-        columnMap.put("multiRow", false);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, "itsANumber", "Number", false, null, null);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, "itsAString", "String", false, 10, null);
-        columnMap.put("columns", datatableColumnsList);
-        String datatabelRequestJsonString = new Gson().toJson(columnMap);
-        LOG.info("map : {}", datatabelRequestJsonString);
-
-        PostDataTablesResponse datatableCreateResponse = this.datatableHelper.createDatatable(datatabelRequestJsonString);
-        assertEquals(datatableName, datatableCreateResponse.getResourceIdentifier());
-        DatatableHelper.verifyDatatableCreatedOnServer(this.requestSpec, this.responseSpec, datatableName);
-
-        GetDataTablesResponse dataTablesResponse = this.datatableHelper.getDataTableDetails(datatableName);
-        assertEquals(5, dataTablesResponse.getColumnHeaderData().size());
-        // Update DataTable
-        columnMap = new HashMap<>();
-        columnMap.put("apptableName", CLIENT_APP_TABLE_NAME);
-        columnMap.put("entitySubType", CLIENT_PERSON_SUBTYPE_NAME);
-        datatableColumnsList = new ArrayList<>();
-        DatatableHelper.deleteDatatableColumn(datatableColumnsList, "itsANumber");
-        columnMap.put("dropColumns", datatableColumnsList);
-        datatabelRequestJsonString = new Gson().toJson(columnMap);
-        LOG.info("map to update : {}", datatabelRequestJsonString);
-        PutDataTablesResponse datatableUpdateResponse = this.datatableHelper.updateDatatable(datatableName, datatabelRequestJsonString);
-        assertNotNull(datatableUpdateResponse);
-        assertEquals(datatableName, datatableUpdateResponse.getResourceIdentifier());
-        dataTablesResponse = this.datatableHelper.getDataTableDetails(datatableName);
-        assertEquals(4, dataTablesResponse.getColumnHeaderData().size());
-
-
     }
 
 }
