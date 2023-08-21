@@ -41,12 +41,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.fineract.client.models.GetDataTablesResponse;
 import org.apache.fineract.client.models.PostDataTablesAppTableIdResponse;
 import org.apache.fineract.client.models.PostDataTablesResponse;
 import org.apache.fineract.client.models.PutDataTablesAppTableIdDatatableIdResponse;
 import org.apache.fineract.client.models.PutDataTablesResponse;
-import org.apache.fineract.client.models.GetDataTablesResponse;
 import org.apache.fineract.client.util.Calls;
 import org.apache.fineract.integrationtests.client.IntegrationTest;
 import org.apache.fineract.integrationtests.common.ClientHelper;
@@ -925,7 +924,6 @@ public class DatatableIntegrationTest extends IntegrationTest {
         assertEquals(datatableName, datatableUpdateResponse.getResourceIdentifier());
         dataTablesResponse = this.datatableHelper.getDataTableDetails(datatableName);
         assertEquals(4, dataTablesResponse.getColumnHeaderData().size());
-
 
     }
 
