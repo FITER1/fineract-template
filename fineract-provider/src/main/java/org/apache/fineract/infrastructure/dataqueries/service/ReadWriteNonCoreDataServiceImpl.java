@@ -1049,7 +1049,7 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
         sqlBuilder.append(", DROP COLUMN `" + name + "`");
         final StringBuilder findFKSql = new StringBuilder();
         findFKSql.append("SELECT count(*)").append("FROM information_schema.TABLE_CONSTRAINTS i")
-                .append(" WHERE i.CONSTRAINT_TYPE = 'FOREIGN KEY'").append(" AND i.TABLE_SCHEMA = DATABASE()")
+                .append(" WHERE i.CONSTRAINT_TYPE = 'FOREIGN KEY'").append(" AND i.TABLE_SCHEMA =").append(sqlGenerator.currentSchema())
                 .append(" AND i.TABLE_NAME = '").append(datatableName).append("' AND i.CONSTRAINT_NAME = 'fk_").append(datatableAlias)
                 .append("_").append(name).append("' ");
         final int count = this.jdbcTemplate.queryForObject(findFKSql.toString(), Integer.class);
