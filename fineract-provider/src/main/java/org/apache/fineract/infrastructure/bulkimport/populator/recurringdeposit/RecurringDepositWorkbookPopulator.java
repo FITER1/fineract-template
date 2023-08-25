@@ -123,9 +123,12 @@ public class RecurringDepositWorkbookPopulator extends AbstractWorkbookPopulator
         writeString(RecurringDepositConstants.INTEREST_CALCULATION_COL, rowHeader, "Interest Calculated*");
         writeString(RecurringDepositConstants.INTEREST_CALCULATION_DAYS_IN_YEAR_COL, rowHeader, "# Days in Year*");
         writeString(RecurringDepositConstants.LOCKIN_PERIOD_COL, rowHeader, "Locked In For");
+        writeString(RecurringDepositConstants.LOCKIN_PERIOD_FREQUENCY_COL, rowHeader, "Locked In Period Frequency");
         writeString(RecurringDepositConstants.RECURRING_DEPOSIT_AMOUNT_COL, rowHeader, "Recurring Deposit Amount");
         writeString(RecurringDepositConstants.DEPOSIT_PERIOD_COL, rowHeader, "Deposit Period");
+        writeString(RecurringDepositConstants.DEPOSIT_PERIOD_FREQUENCY_COL, rowHeader, "Deposit Period Frequency");
         writeString(RecurringDepositConstants.DEPOSIT_FREQUENCY_COL, rowHeader, "Deposit Frequency");
+        writeString(RecurringDepositConstants.DEPOSIT_FREQUENCY_TYPE_COL, rowHeader, "Deposit Frequency Type");
         writeString(RecurringDepositConstants.DEPOSIT_START_DATE_COL, rowHeader, "Deposit Start Date");
         writeString(RecurringDepositConstants.IS_MANDATORY_DEPOSIT_COL, rowHeader, "Is Mandatory Deposit?");
         writeString(RecurringDepositConstants.ALLOW_WITHDRAWAL_COL, rowHeader, "Allow Withdrawal?");

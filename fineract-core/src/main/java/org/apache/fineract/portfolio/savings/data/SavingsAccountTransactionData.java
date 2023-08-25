@@ -69,7 +69,7 @@ public final class SavingsAccountTransactionData implements Serializable {
     private final boolean interestedPostedAsOn;
     private final String submittedByUsername;
     private final String note;
-    private final boolean isManualTransaction;
+    private final Boolean isManualTransaction;
     private final Boolean isReversal;
     private final Long originalTransactionId;
     private final Boolean lienTransaction;
@@ -577,12 +577,14 @@ public final class SavingsAccountTransactionData implements Serializable {
         this.paymentTypeOptions = null;
         this.submittedByUsername = null;
         this.note = null;
-        this.isManualTransaction = false;
+        this.isManualTransaction = null;
         this.isReversal = null;
         this.originalTransactionId = null;
-        this.lienTransaction = lienTransaction;
+        this.lienTransaction = null;
         this.releaseTransactionId = null;
         this.reasonForBlock = null;
+        this.chargesPaidByData = null;
+
     }
 
     public boolean isWithdrawal() {
@@ -795,7 +797,7 @@ public final class SavingsAccountTransactionData implements Serializable {
     }
 
     public boolean isManualTransaction() {
-        return isManualTransaction;
+        return isManualTransaction != null;
     }
 
     public boolean isIsManualTransaction() {

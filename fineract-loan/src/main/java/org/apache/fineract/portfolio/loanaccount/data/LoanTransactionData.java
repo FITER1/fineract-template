@@ -138,6 +138,7 @@ public class LoanTransactionData {
         this.paymentTypeOptions = null;
         this.writeOffReasonOptions = null;
         this.reversalExternalId = ExternalId.empty();
+        this.numberOfRepayments = null;
     }
 
     public static LoanTransactionData importInstance(BigDecimal repaymentAmount, LocalDate repaymentDate, Long repaymentTypeId,
@@ -190,6 +191,7 @@ public class LoanTransactionData {
         this.paymentTypeOptions = null;
         this.writeOffReasonOptions = null;
         this.reversalExternalId = ExternalId.empty();
+        this.numberOfRepayments = null;
     }
 
     public void setNumberOfRepayments(Integer numberOfRepayments) {

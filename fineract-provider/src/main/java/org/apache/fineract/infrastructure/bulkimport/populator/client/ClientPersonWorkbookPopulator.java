@@ -176,7 +176,7 @@ public class ClientPersonWorkbookPopulator extends AbstractWorkbookPopulator {
         writeString(ClientPersonConstants.STAFF_NAME_COL, rowHeader, "Staff Name");
         writeString(ClientPersonConstants.EXTERNAL_ID_COL, rowHeader, "External ID ");
         writeString(ClientPersonConstants.SUBMITTED_ON_COL, rowHeader, "Submitted On Date");
-        writeString(ClientPersonConstants.ACTIVATION_DATE_COL, rowHeader, "Activation date");
+        writeString(ClientPersonConstants.ACTIVATION_DATE_COL, rowHeader, "Activation date*");
         writeString(ClientPersonConstants.ACTIVE_COL, rowHeader, "Active*");
         writeString(ClientPersonConstants.MOBILE_NO_COL, rowHeader, "Mobile number");
         writeString(ClientPersonConstants.DOB_COL, rowHeader, "Date of Birth ");
