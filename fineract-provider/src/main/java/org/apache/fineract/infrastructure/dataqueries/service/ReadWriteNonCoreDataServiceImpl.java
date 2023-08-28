@@ -1046,9 +1046,10 @@ public class ReadWriteNonCoreDataServiceImpl implements ReadWriteNonCoreDataServ
             final StringBuilder constrainBuilder, final List<String> codeMappings) {
         final String datatableAlias = datatableName.toLowerCase().replaceAll("\\s", "_");
         final String name = column.has("name") ? column.get("name").getAsString() : null;
+        sqlBuilder.append(", DROP COLUMN ").append(sqlGenerator.escape(name));
         final StringBuilder findFKSql = new StringBuilder();
         findFKSql.append("SELECT count(*)").append("FROM information_schema.TABLE_CONSTRAINTS i")
-                .append(" WHERE i.CONSTRAINT_TYPE = 'FOREIGN KEY'").append(" AND i.TABLE_SCHEMA = DATABASE()")
+                .append(" WHERE i.CONSTRAINT_TYPE = 'FOREIGN KEY'").append(" AND i.TABLE_SCHEMA =").append(sqlGenerator.currentSchema())
                 .append(" AND i.TABLE_NAME = '").append(datatableName).append("' AND i.CONSTRAINT_NAME = 'fk_").append(datatableAlias)
                 .append("_").append(name).append("' ");
         final int count = this.jdbcTemplate.queryForObject(findFKSql.toString(), Integer.class);

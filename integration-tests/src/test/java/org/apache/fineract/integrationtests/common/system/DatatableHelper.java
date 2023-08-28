@@ -269,6 +269,16 @@ public class DatatableHelper extends IntegrationTest {
         return datatableColumnsList;
     }
 
+    public static List<HashMap<String, Object>> deleteDatatableColumn(List<HashMap<String, Object>> datatableColumnsList,
+            String columnName) {
+
+        final HashMap<String, Object> datatableColumnMap = new HashMap<>();
+
+        datatableColumnMap.put("name", columnName);
+        datatableColumnsList.add(datatableColumnMap);
+        return datatableColumnsList;
+    }
+
     public PostDataTablesResponse createDatatable(PostDataTablesRequest request) {
         return ok(fineract().dataTables.createDatatable(request));
     }
