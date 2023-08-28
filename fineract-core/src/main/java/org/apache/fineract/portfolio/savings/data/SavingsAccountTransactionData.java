@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Optional;
 import lombok.Getter;
 import org.apache.fineract.infrastructure.codes.data.CodeValueData;
 import org.apache.fineract.infrastructure.core.domain.LocalDateInterval;
@@ -797,10 +798,10 @@ public final class SavingsAccountTransactionData implements Serializable {
     }
 
     public boolean isManualTransaction() {
-        return isManualTransaction != null;
+        return Optional.ofNullable(isManualTransaction).orElse(false);
     }
 
     public boolean isIsManualTransaction() {
-        return isManualTransaction;
+        return Optional.ofNullable(isManualTransaction).orElse(false);
     }
 }
