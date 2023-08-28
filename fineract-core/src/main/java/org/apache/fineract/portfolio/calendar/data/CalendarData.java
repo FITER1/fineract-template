@@ -84,7 +84,7 @@ public final class CalendarData implements Serializable {
     private List<EnumOptionData> frequencyNthDayTypeOptions;
 
     // import fields
-    private Integer rowIndex;
+    private transient Integer rowIndex;
     private String dateFormat;
     private String locale;
     private String centerId;
