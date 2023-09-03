@@ -130,7 +130,7 @@ public class PrequalificationChecklistWritePlatformServiceImpl implements Prequa
         return new CommandProcessingResultBuilder().withCommandId(command.commandId()).withEntityId(prequalificationId).build();
     }
 
-    private static final class CheckCategoryMapper implements RowMapper<HardPolicyCategoryData> {
+    static final class CheckCategoryMapper implements RowMapper<HardPolicyCategoryData> {
 
         public String schema() {
             return """
