@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.infrastructure.report.service;
 
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -25,8 +27,6 @@ import java.sql.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import jakarta.ws.rs.core.MultivaluedMap;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.api.ApiParameterHelper;
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
@@ -162,7 +162,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
                     }
 
                     final Class<?> clazz = paramDefEntry.getValueType();
-                    LOGGER.info("addParametersToReport({} : {} : {})", paramName, pValue, clazz.getCanonicalName() );
+                    LOGGER.info("addParametersToReport({} : {} : {})", paramName, pValue, clazz.getCanonicalName());
                     if (clazz.getCanonicalName().equalsIgnoreCase("java.lang.Integer")) {
                         rptParamValues.put(paramName, Integer.parseInt(pValue));
                     } else if (clazz.getCanonicalName().equalsIgnoreCase("java.lang.Long")) {
