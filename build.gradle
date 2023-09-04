@@ -266,7 +266,7 @@ allprojects  {
             '**/images/diag-*.svg',
             '**/*.avsc',
             "**/generated/**/*MapperImpl.java",
-	    // Pentaho reports
+            // Pentaho reports
             '**/*.prpt',
             '**/*.properties',
             '**/*.PROPERTIES',
@@ -274,7 +274,7 @@ allprojects  {
             '**/io/fiter/**',
             '**/*.properties',
             '**/*.js',
-            '**/target/**'	
+            '**/target/**'
         ]
     }
 }
