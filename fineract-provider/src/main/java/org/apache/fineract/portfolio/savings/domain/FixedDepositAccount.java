@@ -566,7 +566,7 @@ public class FixedDepositAccount extends SavingsAccount {
                     postingTransaction.reverse();
                     final SavingsAccountTransaction newPostingTransaction = SavingsAccountTransaction.interestPosting(this, office(),
                             interestPostingTransactionDate, interestEarnedToBePostedForPeriod, interestPostingPeriod.isUserPosting());
-		    this.addNewTransaction(newPostingTransaction);
+                    this.addNewTransaction(newPostingTransaction);
                     recalucateDailyBalanceDetails = true;
                 }
             }

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
-
 import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -143,7 +142,6 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
             saveUpdatedTransactionsOfSavingsAccount(account.getSavingsAccountTransactionsWithPivotConfig());
         }
 
-
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, transactionBooleanValues.isAccountTransfer(),
                 backdatedTxnsAllowedTill);
 
@@ -163,7 +161,7 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
             }
         }
         List<SavingsAccountTransaction> newTransactions = new ArrayList<>();
-        while(!transactions.isEmpty()) {
+        while (!transactions.isEmpty()) {
             newTransactions.add(transactions.pop());
         }
         return newTransactions;

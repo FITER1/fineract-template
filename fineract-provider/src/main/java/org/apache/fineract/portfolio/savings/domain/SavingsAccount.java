@@ -3297,7 +3297,8 @@ public class SavingsAccount extends AbstractPersistableCustom {
             this.summary.updateSummaryWithPivotConfig(this.currency, this.savingsAccountTransactionSummaryWrapper, transaction,
                     this.savingsAccountTransactions);
         } else {
-            this.addNewTransaction(transaction);;
+            this.addNewTransaction(transaction);
+            ;
         }
     }
 
