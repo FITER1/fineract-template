@@ -18,10 +18,10 @@
  */
 package org.apache.fineract.portfolio.loanaccount.rescheduleloan.data;
 
-import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 
 /**
  * Immutable data object representing restructure credits request data.
@@ -43,40 +43,38 @@ public final class RestructureCreditsRequestData {
     private String modifiedByUser;
     private Collection<RestructureCreditsLoanMappingData> loanMappingData;
 
-
-    private RestructureCreditsRequestData(
-            final Long id,final String clientName, final String productName, final BigDecimal totalLoanAmount,
-            final EnumOptionData status,final LocalDateTime newDisbursementDate,final String comments,
-            final LocalDateTime dateRequested,final String requestedByUser,final LocalDateTime approvedOnDate,
-            final String approvedByUser,final LocalDateTime lastModifiedDate,final String modifiedByUser) {
+    private RestructureCreditsRequestData(final Long id, final String clientName, final String productName,
+            final BigDecimal totalLoanAmount, final EnumOptionData status, final LocalDateTime newDisbursementDate, final String comments,
+            final LocalDateTime dateRequested, final String requestedByUser, final LocalDateTime approvedOnDate,
+            final String approvedByUser, final LocalDateTime lastModifiedDate, final String modifiedByUser) {
 
         this.id = id;
         this.clientName = clientName;
-        this.productName=productName;
-        this.totalLoanAmount=totalLoanAmount;
-        this.status=status;
-        this.newDisbursementDate=newDisbursementDate;
-        this.comments=comments;
-        this.dateRequested=dateRequested;
-        this.requestedByUser=requestedByUser;
-        this.approvedOnDate=approvedOnDate;
-        this.approvedByUser=approvedByUser;
-        this.lastModifiedDate=lastModifiedDate;
-        this.modifiedByUser=modifiedByUser;
+        this.productName = productName;
+        this.totalLoanAmount = totalLoanAmount;
+        this.status = status;
+        this.newDisbursementDate = newDisbursementDate;
+        this.comments = comments;
+        this.dateRequested = dateRequested;
+        this.requestedByUser = requestedByUser;
+        this.approvedOnDate = approvedOnDate;
+        this.approvedByUser = approvedByUser;
+        this.lastModifiedDate = lastModifiedDate;
+        this.modifiedByUser = modifiedByUser;
     }
 
     /**
      * template of the restructure credits params
+     *
      * @return
      */
-    public static RestructureCreditsRequestData instance(final Long id,final String clientName, final String productName, final BigDecimal totalLoanAmount,
-                                                         final EnumOptionData status,final LocalDateTime newDisbursementDate,final String comments,
-                                                         final LocalDateTime dateRequested,final String requestedByUser,final LocalDateTime approvedOnDate,
-                                                         final String approvedByUser,final LocalDateTime lastModifiedDate,final String modifiedByUser) {
+    public static RestructureCreditsRequestData instance(final Long id, final String clientName, final String productName,
+            final BigDecimal totalLoanAmount, final EnumOptionData status, final LocalDateTime newDisbursementDate, final String comments,
+            final LocalDateTime dateRequested, final String requestedByUser, final LocalDateTime approvedOnDate,
+            final String approvedByUser, final LocalDateTime lastModifiedDate, final String modifiedByUser) {
 
-        return new RestructureCreditsRequestData(id, clientName, productName, totalLoanAmount, status,
-                newDisbursementDate, comments, dateRequested, requestedByUser, approvedOnDate, approvedByUser,
-                lastModifiedDate, modifiedByUser);
+        return new RestructureCreditsRequestData(id, clientName, productName, totalLoanAmount, status, newDisbursementDate, comments,
+                dateRequested, requestedByUser, approvedOnDate, approvedByUser, lastModifiedDate, modifiedByUser);
     }
 
     public Long getId() {

@@ -20,21 +20,20 @@ package org.apache.fineract.portfolio.client.domain;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
-
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.portfolio.client.api.ClientApiConstants;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 
 /**
- * LoanRepaymentScheduleDetail encapsulates all the details of a {@link Client} that are also used and persisted by
- * a {@link Loan}.
+ * LoanRepaymentScheduleDetail encapsulates all the details of a {@link Client} that are also used and persisted by a
+ * {@link Loan}.
  */
 @Embeddable
 public class ClientInfoRelatedDetail {
-    
+
     @Column(name = "loan_cycle", nullable = false)
     private Integer loanCycle;
-    
+
     @Column(name = "group_number", nullable = true)
     private String groupNumber;
 
@@ -43,42 +42,41 @@ public class ClientInfoRelatedDetail {
 
     @Column(name = "other_names", nullable = true)
     private String othernames;
-    
+
     @Column(name = "group_member", nullable = true)
     private String groupMember;
-    
+
     @Column(name = "status_in_group", nullable = true)
     private String statusInGroup;
-    
+
     @Column(name = "retirement_reason", nullable = true)
     private String retirementReason;
-    
+
     @Column(name = "civil_status", nullable = true)
     private String civilStatus;
-    
+
     @Column(name = "education_level", nullable = true)
     private String educationLevel;
-    
+
     @Column(name = "ethinicity", nullable = true)
     private String ethinicity;
-    
+
     @Column(name = "nationality", nullable = true)
     private String nationality;
-    
+
     @Column(name = "languages", nullable = true)
     private String languages;
-    
+
     @Column(name = "economic_sector", nullable = true)
     private String economicSector;
-    
+
     @Column(name = "economic_activity", nullable = true)
     private String economicActivity;
 
     public ClientInfoRelatedDetail(Integer loanCycle, String groupNumber, String maidenName, String othernames, String groupMember,
-                                   String statusInGroup, String retirementReason, String civilStatus,
-                                   String educationLevel, String ethinicity, String nationality, String languages,
-                                   String economicSector,String economicActivity) {
-        this.loanCycle=loanCycle;
+            String statusInGroup, String retirementReason, String civilStatus, String educationLevel, String ethinicity, String nationality,
+            String languages, String economicSector, String economicActivity) {
+        this.loanCycle = loanCycle;
         this.groupNumber = groupNumber;
         this.maidenName = maidenName;
         this.othernames = othernames;
@@ -88,7 +86,7 @@ public class ClientInfoRelatedDetail {
         this.civilStatus = civilStatus;
         this.educationLevel = educationLevel;
         this.ethinicity = ethinicity;
-        this.nationality=nationality;
+        this.nationality = nationality;
         this.languages = languages;
         this.economicSector = economicSector;
         this.economicActivity = economicActivity;
@@ -99,22 +97,22 @@ public class ClientInfoRelatedDetail {
     }
 
     public static ClientInfoRelatedDetail createFrom(JsonCommand command) {
-        final Integer loanCycle= command.integerValueOfParameterNamed(ClientApiConstants.loanCycleParamName);
-        final String groupNumber= command.stringValueOfParameterNamed(ClientApiConstants.groupNumberParamName);
-        final String maidenName= command.stringValueOfParameterNamed(ClientApiConstants.maidenNameParamName);
-        final String othernames= command.stringValueOfParameterNamed(ClientApiConstants.otherNamesParamName);
-        final String groupMember= command.stringValueOfParameterNamed(ClientApiConstants.groupMemberParamName);
-        final String statusInGroup= command.stringValueOfParameterNamed(ClientApiConstants.statusInGroupParamName);
-        final String retirementReason= command.stringValueOfParameterNamed(ClientApiConstants.retirementReasonParamName);
-        final String civilStatus= command.stringValueOfParameterNamed(ClientApiConstants.civilStatusParamName);
-        final String educationLevel= command.stringValueOfParameterNamed(ClientApiConstants.educationLevelParamName);
-        final String ethinicity= command.stringValueOfParameterNamed(ClientApiConstants.ethinicityParamName);
-        final String nationality= command.stringValueOfParameterNamed(ClientApiConstants.nationalityParamName);
-        final String languages= command.stringValueOfParameterNamed(ClientApiConstants.languagesParamName);
-        final String economicSector= command.stringValueOfParameterNamed(ClientApiConstants.economicSectorParamName);
-        final String economicActivity= command.stringValueOfParameterNamed(ClientApiConstants.economicActivityParamName);
+        final Integer loanCycle = command.integerValueOfParameterNamed(ClientApiConstants.loanCycleParamName);
+        final String groupNumber = command.stringValueOfParameterNamed(ClientApiConstants.groupNumberParamName);
+        final String maidenName = command.stringValueOfParameterNamed(ClientApiConstants.maidenNameParamName);
+        final String othernames = command.stringValueOfParameterNamed(ClientApiConstants.otherNamesParamName);
+        final String groupMember = command.stringValueOfParameterNamed(ClientApiConstants.groupMemberParamName);
+        final String statusInGroup = command.stringValueOfParameterNamed(ClientApiConstants.statusInGroupParamName);
+        final String retirementReason = command.stringValueOfParameterNamed(ClientApiConstants.retirementReasonParamName);
+        final String civilStatus = command.stringValueOfParameterNamed(ClientApiConstants.civilStatusParamName);
+        final String educationLevel = command.stringValueOfParameterNamed(ClientApiConstants.educationLevelParamName);
+        final String ethinicity = command.stringValueOfParameterNamed(ClientApiConstants.ethinicityParamName);
+        final String nationality = command.stringValueOfParameterNamed(ClientApiConstants.nationalityParamName);
+        final String languages = command.stringValueOfParameterNamed(ClientApiConstants.languagesParamName);
+        final String economicSector = command.stringValueOfParameterNamed(ClientApiConstants.economicSectorParamName);
+        final String economicActivity = command.stringValueOfParameterNamed(ClientApiConstants.economicActivityParamName);
 
-        return new ClientInfoRelatedDetail(loanCycle,groupNumber, maidenName, othernames, groupMember, statusInGroup,
-                retirementReason, civilStatus, educationLevel, ethinicity, nationality, languages,economicSector, economicActivity);
+        return new ClientInfoRelatedDetail(loanCycle, groupNumber, maidenName, othernames, groupMember, statusInGroup, retirementReason,
+                civilStatus, educationLevel, ethinicity, nationality, languages, economicSector, economicActivity);
     }
 }
