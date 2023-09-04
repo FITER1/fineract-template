@@ -95,7 +95,7 @@ dependencies {
                 include '*.jar'
             },
             'org.openjdk.nashorn:nashorn-core',
-	    'org.codehaus.groovy:groovy-all'
+            'org.codehaus.groovy:groovy-all'
             )
 
     implementation ('software.amazon.msk:aws-msk-iam-auth:1.1.7') {
