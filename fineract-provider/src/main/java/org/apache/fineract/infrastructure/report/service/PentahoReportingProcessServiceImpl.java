@@ -206,7 +206,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
             rptParamValues.put("password", "root");
         } catch (final Exception e) {
             LOGGER.error("error.msg.reporting.error:", e);
-            throw new PlatformDataIntegrityException("error.msg.reporting.error","Pentaho failed: " + e.getMessage(), e);
+            throw new PlatformDataIntegrityException("error.msg.reporting.error", "Pentaho failed: " + e.getMessage(), e);
         }
     }
 
