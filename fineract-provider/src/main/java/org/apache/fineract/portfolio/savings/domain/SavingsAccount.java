@@ -319,6 +319,8 @@ public class SavingsAccount extends AbstractPersistableCustom {
     protected SavingsHelper savingsHelper;
     @Transient
     protected List<SavingsAccountTransaction> savingsAccountTransactions = new ArrayList<>();
+    @Transient
+    protected SavingsAccountTransactionRepository savingsAccountTransactionRepository;
 
     @Column(name = "deposit_type_enum", insertable = false, updatable = false)
     private Integer depositType;
@@ -549,9 +551,9 @@ public class SavingsAccount extends AbstractPersistableCustom {
                                 interestEarnedToBePostedForPeriod.negated(), interestPostingPeriod.isUserPosting());
                     }
                     if (backdatedTxnsAllowedTill) {
-                        addTransactionToExisting(newPostingTransaction);
+                        this.addNewTransactionToExisting(newPostingTransaction);
                     } else {
-                        addTransaction(newPostingTransaction);
+                        this.addNewTransaction(newPostingTransaction);
                     }
                     if (applyWithHoldTax) {
                         createWithHoldTransaction(interestEarnedToBePostedForPeriod.getAmount(), interestPostingTransactionDate,
@@ -589,14 +591,14 @@ public class SavingsAccount extends AbstractPersistableCustom {
                                     interestPostingPeriod.isUserPosting());
                         }
                         if (backdatedTxnsAllowedTill) {
-                            addTransactionToExisting(newPostingTransaction);
+                            this.addNewTransactionToExisting(newPostingTransaction);
                             if (reversal != null) {
-                                addTransactionToExisting(reversal);
+                                this.addNewTransactionToExisting(reversal);
                             }
                         } else {
-                            addTransaction(newPostingTransaction);
+                            this.addNewTransaction(newPostingTransaction);
                             if (reversal != null) {
-                                addTransaction(reversal);
+                                this.addNewTransaction(reversal);
                             }
                         }
                         if (applyWithHoldTaxForOldTransaction) {
@@ -709,9 +711,9 @@ public class SavingsAccount extends AbstractPersistableCustom {
                 SavingsAccountTransaction withholdTransaction = SavingsAccountTransaction.withHoldTax(this, office(), date,
                         Money.of(currency, totalTax), taxSplit);
                 if (backdatedTxnsAllowedTill) {
-                    addTransactionToExisting(withholdTransaction);
+                    addNewTransactionToExisting(withholdTransaction);
                 } else {
-                    addTransaction(withholdTransaction);
+                    addNewTransaction(withholdTransaction);
                 }
                 isTaxAdded = true;
             }
@@ -735,7 +737,7 @@ public class SavingsAccount extends AbstractPersistableCustom {
                     withholdTransaction.reverse();
                     SavingsAccountTransaction newWithholdTransaction = SavingsAccountTransaction.withHoldTax(this, office(),
                             withholdTransaction.transactionLocalDate(), Money.of(currency, totalTax), taxSplit);
-                    addTransaction(newWithholdTransaction);
+                    addNewTransaction(newWithholdTransaction);
                     isTaxAdded = true;
                 }
             }
@@ -1149,9 +1151,9 @@ public class SavingsAccount extends AbstractPersistableCustom {
                 savingsAccountTransactionType, refNo);
 
         if (backdatedTxnsAllowedTill) {
-            addTransactionToExisting(transaction);
+            addNewTransactionToExisting(transaction);
         } else {
-            addTransaction(transaction);
+            addNewTransaction(transaction);
         }
 
         if (this.sub_status.equals(SavingsAccountSubStatusEnum.INACTIVE.getValue())
@@ -1286,9 +1288,9 @@ public class SavingsAccount extends AbstractPersistableCustom {
                 transactionDTO.getCreatedDate(), transactionDTO.getAppUser(), refNo);
 
         if (backdatedTxnsAllowedTill) {
-            addTransactionToExisting(transaction);
+            addNewTransactionToExisting(transaction);
         } else {
-            addTransaction(transaction);
+            addNewTransaction(transaction);
         }
 
         if (this.sub_status.equals(SavingsAccountSubStatusEnum.INACTIVE.getValue())
@@ -2963,6 +2965,19 @@ public class SavingsAccount extends AbstractPersistableCustom {
         this.savingsAccountTransactions.add(transaction);
     }
 
+    private SavingsAccountTransaction getLastTransaction() {
+        SavingsAccountTransaction lastTransaction = null;
+        List<SavingsAccountTransaction> accountTransactionsSorted = retrieveListOfTransactions();
+        for (int i = accountTransactionsSorted.size() - 1; i >= 0; i--) {
+            SavingsAccountTransaction transaction = accountTransactionsSorted.get(i);
+            if (transaction.isNotReversed()) {
+                lastTransaction = transaction;
+                break;
+            }
+        }
+        return lastTransaction;
+    }
+
     public void setStatus(final Integer status) {
         this.status = status;
     }
@@ -3278,11 +3293,11 @@ public class SavingsAccount extends AbstractPersistableCustom {
                 transaction.getAmount(this.getCurrency()).getAmount());
         transaction.getSavingsAccountChargesPaid().add(chargePaidBy);
         if (backdatedTxnsAllowedTill) {
-            this.savingsAccountTransactions.add(transaction);
+            addNewTransactionToExisting(transaction);
             this.summary.updateSummaryWithPivotConfig(this.currency, this.savingsAccountTransactionSummaryWrapper, transaction,
                     this.savingsAccountTransactions);
         } else {
-            this.transactions.add(transaction);
+            this.addNewTransaction(transaction);;
         }
     }
 
@@ -3939,5 +3954,25 @@ public class SavingsAccount extends AbstractPersistableCustom {
         return transactions.stream()
                 .map(transaction -> transaction.toSavingsAccountTransactionDetailsForPostingPeriod(this.currency, this.allowOverdraft))
                 .toList();
+    }
+
+    private void addNewTransaction(SavingsAccountTransaction transaction) {
+        addTransaction(transaction);
+        if (this.savingsAccountTransactionRepository != null) {
+            this.savingsAccountTransactionRepository.saveAndFlush(transaction);
+        }
+        transaction.setNewTransaction(true);
+    }
+
+    private void addNewTransactionToExisting(SavingsAccountTransaction transaction) {
+        addTransactionToExisting(transaction);
+        if (this.savingsAccountTransactionRepository != null) {
+            this.savingsAccountTransactionRepository.saveAndFlush(transaction);
+        }
+        transaction.setNewTransaction(true);
+    }
+
+    public void setSavingsAccountTransactionRepository(SavingsAccountTransactionRepository savingsAccountTransactionRepository) {
+        this.savingsAccountTransactionRepository = savingsAccountTransactionRepository;
     }
 }

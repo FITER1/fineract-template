@@ -27,7 +27,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.UUID;
+
 import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlatformService;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -133,18 +135,38 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
         account.validateAccountBalanceDoesNotBecomeNegative(transactionAmount, transactionBooleanValues.isExceptionForBalanceCheck(),
                 depositAccountOnHoldTransactions, backdatedTxnsAllowedTill);
 
-        saveTransactionToGenerateTransactionId(withdrawal);
+        this.savingsAccountRepository.save(account);
+        List<SavingsAccountTransaction> newTransactions = this.extractNewTransactions(account);
+        saveTransactionToGenerateTransactionId(newTransactions);
         if (backdatedTxnsAllowedTill) {
             // Update transactions separately
             saveUpdatedTransactionsOfSavingsAccount(account.getSavingsAccountTransactionsWithPivotConfig());
         }
-        this.savingsAccountRepository.save(account);
+
 
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds, transactionBooleanValues.isAccountTransfer(),
                 backdatedTxnsAllowedTill);
 
         businessEventNotifierService.notifyPostBusinessEvent(new SavingsWithdrawalBusinessEvent(withdrawal));
         return withdrawal;
+    }
+
+    @Override
+    public List<SavingsAccountTransaction> extractNewTransactions(SavingsAccount account) {
+        Stack<SavingsAccountTransaction> transactions = new Stack<>();
+        for (int i = account.transactions.size() - 1; i >= 0; i--) {
+            SavingsAccountTransaction transaction = account.transactions.get(i);
+            if (transaction.isNewTransaction()) {
+                transactions.push(transaction);
+            } else {
+                break;
+            }
+        }
+        List<SavingsAccountTransaction> newTransactions = new ArrayList<>();
+        while(!transactions.isEmpty()) {
+            newTransactions.add(transactions.pop());
+        }
+        return newTransactions;
     }
 
     private AppUser getAppUserIfPresent() {
@@ -169,6 +191,7 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
             final LocalDate transactionDate, final BigDecimal transactionAmount, final PaymentDetail paymentDetail,
             final boolean isAccountTransfer, final boolean isRegularTransaction,
             final SavingsAccountTransactionType savingsAccountTransactionType, final boolean backdatedTxnsAllowedTill) {
+        account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
         AppUser user = getAppUserIfPresent();
         account.validateForAccountBlock();
         account.validateForCreditBlock();
@@ -210,7 +233,8 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
                     financialYearBeginningMonth, postInterestOnDate, backdatedTxnsAllowedTill, postReversals);
         }
 
-        saveTransactionToGenerateTransactionId(deposit);
+        List<SavingsAccountTransaction> newTransactions = this.extractNewTransactions(account);
+        saveTransactionToGenerateTransactionId(newTransactions);
 
         if (backdatedTxnsAllowedTill) {
             // Update transactions separately
@@ -253,9 +277,8 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
         existingReversedTransactionIds.addAll(account.findExistingReversedTransactionIds());
     }
 
-    private Long saveTransactionToGenerateTransactionId(final SavingsAccountTransaction transaction) {
-        this.savingsAccountTransactionRepository.saveAndFlush(transaction);
-        return transaction.getId();
+    private void saveTransactionToGenerateTransactionId(List<SavingsAccountTransaction> transactions) {
+        this.savingsAccountTransactionRepository.saveAllAndFlush(transactions);
     }
 
     private void saveUpdatedTransactionsOfSavingsAccount(final List<SavingsAccountTransaction> savingsAccountTransactions) {

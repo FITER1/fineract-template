@@ -26,6 +26,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,6 +37,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import jakarta.persistence.Transient;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.infrastructure.core.domain.LocalDateInterval;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -142,6 +145,9 @@ public final class SavingsAccountTransaction extends AbstractPersistableCustom {
 
     @Column(name = "ref_no", nullable = true)
     private String refNo;
+
+    @Transient
+    private boolean newTransaction;
 
     SavingsAccountTransaction() {
         this.dateOf = null;
@@ -938,5 +944,13 @@ public final class SavingsAccountTransaction extends AbstractPersistableCustom {
         return new SavingsAccountTransactionDetailsForPostingPeriod(getId(), this.dateOf, this.balanceEndDate, this.runningBalance,
                 this.amount, currency, this.balanceNumberOfDays, isDeposit(), isWithdrawal(), isAllowOverDraft,
                 isChargeTransactionAndNotReversed(), isDividendPayoutAndNotReversed());
+    }
+
+    public boolean isNewTransaction() {
+        return newTransaction;
+    }
+
+    public void setNewTransaction(boolean newTransaction) {
+        this.newTransaction = newTransaction;
     }
 }
