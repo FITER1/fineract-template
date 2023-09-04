@@ -2965,19 +2965,6 @@ public class SavingsAccount extends AbstractPersistableCustom {
         this.savingsAccountTransactions.add(transaction);
     }
 
-    private SavingsAccountTransaction getLastTransaction() {
-        SavingsAccountTransaction lastTransaction = null;
-        List<SavingsAccountTransaction> accountTransactionsSorted = retrieveListOfTransactions();
-        for (int i = accountTransactionsSorted.size() - 1; i >= 0; i--) {
-            SavingsAccountTransaction transaction = accountTransactionsSorted.get(i);
-            if (transaction.isNotReversed()) {
-                lastTransaction = transaction;
-                break;
-            }
-        }
-        return lastTransaction;
-    }
-
     public void setStatus(final Integer status) {
         this.status = status;
     }
