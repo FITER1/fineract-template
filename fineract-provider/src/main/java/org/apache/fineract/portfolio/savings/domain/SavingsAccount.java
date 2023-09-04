@@ -3285,7 +3285,6 @@ public class SavingsAccount extends AbstractPersistableCustom {
                     this.savingsAccountTransactions);
         } else {
             this.addNewTransaction(transaction);
-            ;
         }
     }
 
