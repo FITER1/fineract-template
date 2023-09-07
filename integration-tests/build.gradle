@@ -26,6 +26,7 @@ configurations {
     tomcat
 }
 
+
 apply from: 'dependencies.gradle'
 
 // Allow external drivers to be used for the tests without packaging it
@@ -35,6 +36,26 @@ configurations {
 }
 dependencies {
     driver 'mysql:mysql-connector-java:8.0.33'
+}
+
+configurations.all {
+    resolutionStrategy.capabilitiesResolution.withCapability('org.apache.groovy:groovy') {
+        selectHighestVersion()
+    }
+}
+
+dependencies {
+    modules {
+        module("org.apache.groovy:groovy") {
+            replacedBy("org.codehaus.groovy:groovy", "google-collections is now part of Guava")
+        }
+        module("org.apache.groovy:groovy-xml") {
+            replacedBy("org.codehaus.groovy:groovy-xml", "google-collections is now part of Guava")
+        }
+        module("org.apache.groovy:groovy-json") {
+            replacedBy("org.codehaus.groovy:groovy-json", "google-collections is now part of Guava")
+        }
+    }
 }
 
 cargo {
@@ -81,7 +102,7 @@ cargo {
             property 'cargo.tomcat.connector.sslProtocol', 'TLS'
             property 'cargo.tomcat.connector.clientAuth', false
             property 'cargo.protocol', 'https'
-            property 'cargo.servlet.port', 8443
+            property 'cargo.servlet.port', 8444
         }
     }
 }
