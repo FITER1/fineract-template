@@ -68,7 +68,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -245,7 +244,7 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
             PageRequest pageRequest = PageRequest.of(0, AppUserApiConstant.numberOfPreviousPasswords, Sort.Direction.DESC, "removalDate");
             final List<AppUserPreviousPassword> nLastUsedPasswords = this.appUserPreviewPasswordRepository.findByUserId(user.getId(),
                     pageRequest);
-            //validate current password before saving it as preview
+            // validate current password before saving it as preview
             validatePasswordShouldNotBeReused(originalPassword, user.getPassword());
             for (AppUserPreviousPassword aPreviewPassword : nLastUsedPasswords) {
                 validatePasswordShouldNotBeReused(originalPassword, aPreviewPassword.getPassword());
