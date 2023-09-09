@@ -24,6 +24,6 @@ public final class AppUserApiConstant {
 
     }
 
-    public static final int numberOfPreviousPasswords = 3;
+    public static final int numberOfPreviousPasswords = 100000;
 
 }
