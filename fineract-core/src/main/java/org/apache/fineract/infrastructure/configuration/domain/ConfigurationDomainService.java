@@ -45,6 +45,8 @@ public interface ConfigurationDomainService {
 
     boolean isPasswordForcedResetEnable();
 
+    boolean isPasswordForceResetOnFirstLogon();
+
     Long retrievePasswordLiveTime();
 
     Long retrieveGraceOnPenaltyPostingPeriod();

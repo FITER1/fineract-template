@@ -42,9 +42,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class SpringSecurityPlatformSecurityContext implements PlatformSecurityContext {
 
-    // private static final Logger LOG =
-    // LoggerFactory.getLogger(SpringSecurityPlatformSecurityContext.class);
-
     private final ConfigurationDomainService configurationDomainService;
 
     protected static final List<CommandWrapper> EXEMPT_FROM_PASSWORD_RESET_CHECK = new ArrayList<CommandWrapper>(
@@ -71,7 +68,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             throw new UnAuthenticatedUserException();
         }
 
-        if (this.doesPasswordHasToBeRenewed(currentUser)) {
+        if (this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
 
@@ -99,7 +96,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             return null;
         }
 
-        if (this.doesPasswordHasToBeRenewed(currentUser)) {
+        if (this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
 
@@ -122,7 +119,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             throw new UnAuthenticatedUserException();
         }
 
-        if (this.shouldCheckForPasswordForceReset(commandWrapper) && this.doesPasswordHasToBeRenewed(currentUser)) {
+        if (this.shouldCheckForPasswordForceReset(commandWrapper) && this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
 
@@ -148,7 +145,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
     }
 
     @Override
-    public boolean doesPasswordHasToBeRenewed(AppUser currentUser) {
+    public boolean doesPasswordHaveToBeRenewed(AppUser currentUser) {
 
         if (this.configurationDomainService.isPasswordForcedResetEnable() && !currentUser.getPasswordNeverExpires()) {
 
@@ -160,7 +157,10 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             if (DateUtils.getLocalDateOfTenant().isAfter(passwordExpirationDate)) {
                 return true;
             }
+        } else if (this.configurationDomainService.isPasswordForceResetOnFirstLogon() && currentUser.isFirstTimeLoginRemaining()) {
+            return true;
         }
+
         return false;
 
     }

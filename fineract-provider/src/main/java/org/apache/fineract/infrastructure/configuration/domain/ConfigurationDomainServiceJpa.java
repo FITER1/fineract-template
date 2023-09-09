@@ -162,6 +162,13 @@ public class ConfigurationDomainServiceJpa implements ConfigurationDomainService
     }
 
     @Override
+    public boolean isPasswordForceResetOnFirstLogon() {
+        final String propertyName = "force-password-reset-on-first-logon";
+        final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
+        return property.isEnabled();
+    }
+
+    @Override
     public Long retrieveOpeningBalancesContraAccount() {
         final String propertyName = "office-opening-balances-contra-account";
         final GlobalConfigurationPropertyData property = getGlobalConfigurationPropertyData(propertyName);
