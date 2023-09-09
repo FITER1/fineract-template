@@ -30,6 +30,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -118,6 +119,12 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
 
     @Column(name = "cannot_change_password", nullable = true)
     private Boolean cannotChangePassword;
+
+    @Column(name = "temporary_password_expiry_time", nullable = true)
+    private LocalDateTime temporaryPasswordExpiryTime;
+
+    @Column(name = "temporary_password", nullable = true)
+    private String temporaryPassword;
 
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
@@ -728,4 +735,13 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
     public String toString() {
         return "AppUser [username=" + this.username + ", getId()=" + this.getId() + "]";
     }
+
+    public LocalDateTime getTemporaryPasswordExpiryTime() {
+        return temporaryPasswordExpiryTime;
+    }
+
+    public String getTemporaryPassword() {
+        return temporaryPassword;
+    }
+
 }
