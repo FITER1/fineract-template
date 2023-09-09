@@ -238,7 +238,7 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
      * Encode the new submitted password and retrieve the last N used passwords to check if the current submitted
      * password matches with one of them.
      */
-    private AppUserPreviousPassword getCurrentPasswordToSaveAsPreview(final AppUser user, final JsonCommand command) {
+    public AppUserPreviousPassword getCurrentPasswordToSaveAsPreview(final AppUser user, final JsonCommand command) {
         final String passWordEncodedValue = user.getEncodedPassword(command, this.platformPasswordEncoder);
         String originalPassword = command.stringValueOfParameterNamed("password");
 
