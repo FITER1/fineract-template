@@ -307,4 +307,10 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
         log.error("handleDataIntegrityIssues: Neither duplicate username nor existing user; unknown error occured", dve);
         return new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue", "Unknown data integrity issue with resource.");
     }
+
+
+    @Override
+    public AppUser saveUser(AppUser appUser) {
+        return appUserRepository.saveAndFlush(appUser);
+    }
 }

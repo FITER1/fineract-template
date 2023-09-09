@@ -35,6 +35,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -42,19 +43,24 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
+import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
+import org.apache.fineract.infrastructure.security.exception.UserLockedOutException;
+import org.apache.fineract.infrastructure.security.service.PlatformUserDetailsService;
 import org.apache.fineract.infrastructure.security.service.SpringSecurityPlatformSecurityContext;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.useradministration.data.RoleData;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.Role;
+import org.apache.fineract.useradministration.service.AppUserWritePlatformService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
@@ -68,6 +74,12 @@ public class AuthenticationApiResource {
     @Value("${fineract.security.2fa.enabled}")
     private boolean twoFactorEnabled;
 
+    @Value("${fineract.security.failed-login-attempt-before-lockout-count}")
+    private int noOfFailedLoginAttemptBeforeLockout;
+
+    @Value("${fineract.security.failed-login-lockout-duration}")
+    private int lockoutDuration;
+
     public static class AuthenticateRequest {
 
         public String username;
@@ -79,6 +91,8 @@ public class AuthenticationApiResource {
     private final ToApiJsonSerializer<AuthenticatedUserData> apiJsonSerializerService;
     private final SpringSecurityPlatformSecurityContext springSecurityPlatformSecurityContext;
     private final ClientReadPlatformService clientReadPlatformService;
+    private final PlatformUserDetailsService platformUserDetailsService;
+    private final AppUserWritePlatformService appUserWritePlatformService;
 
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -102,6 +116,12 @@ public class AuthenticationApiResource {
                     + apiRequestBodyAsJson + "; username=" + request.username + ", password=" + request.password);
         }
 
+        AppUser appUser = (AppUser) platformUserDetailsService.loadUserByUsername(request.username);
+        if (appUser.isLockedOut()) {
+            throw new UserLockedOutException();
+        }
+
+        try {
         final Authentication authentication = new UsernamePasswordAuthenticationToken(request.username, request.password);
         final Authentication authenticationCheck = this.customAuthenticationProvider.authenticate(authentication);
 
@@ -109,6 +129,7 @@ public class AuthenticationApiResource {
         AuthenticatedUserData authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setPermissions(permissions);
 
         if (authenticationCheck.isAuthenticated()) {
+            appUser.resetNoOfFailedLoginAttempts();
             final Collection<GrantedAuthority> authorities = new ArrayList<>(authenticationCheck.getAuthorities());
             for (final GrantedAuthority grantedAuthority : authorities) {
                 permissions.add(grantedAuthority.getAuthority());
@@ -154,5 +175,15 @@ public class AuthenticationApiResource {
         }
 
         return this.apiJsonSerializerService.serialize(authenticatedUserData);
+        } catch (AuthenticationException e) {
+            appUser.incrementNoOfFailedLoginAttempts();
+            int noOfFailedLoginAttempts = appUser.getNoOfFailedLoginAttempts();
+            if (noOfFailedLoginAttemptBeforeLockout > 0 && noOfFailedLoginAttempts % noOfFailedLoginAttemptBeforeLockout == 0) {
+                appUser.setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()).plusMinutes(lockoutDuration));
+            }
+            throw e;
+        } finally {
+            appUserWritePlatformService.saveUser(appUser);
+        }
     }
 }
