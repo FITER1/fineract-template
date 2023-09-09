@@ -195,13 +195,17 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
         return organisationalRole;
     }
 
-    public void updatePassword(final String encodePassword) {
+    public void updatePassword(final String password) {
+        updatePassword(password, false);
+    }
+
+    public void updatePassword(final String encodePassword, boolean firstTimeLoginRemaining) {
         if (cannotChangePassword != null && cannotChangePassword == true) {
             throw new NoAuthorizationException("Password of this user may not be modified");
         }
 
         this.password = encodePassword;
-        this.firstTimeLoginRemaining = false;
+        this.firstTimeLoginRemaining = firstTimeLoginRemaining;
         this.lastTimePasswordUpdated = DateUtils.getBusinessLocalDate();
 
     }
@@ -722,6 +726,10 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
             }
         }
         return newAppUserClientMappings;
+    }
+
+    public boolean isFirstTimeLoginRemaining() {
+        return this.firstTimeLoginRemaining;
     }
 
     @Override

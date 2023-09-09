@@ -39,7 +39,7 @@ public interface PlatformSecurityContext extends PlatformUserRightsContext {
 
     String officeHierarchy();
 
-    boolean doesPasswordHasToBeRenewed(AppUser currentUser);
+    boolean doesPasswordHaveToBeRenewed(AppUser currentUser);
 
     AppUser authenticatedUser(CommandWrapper commandWrapper);
 }
