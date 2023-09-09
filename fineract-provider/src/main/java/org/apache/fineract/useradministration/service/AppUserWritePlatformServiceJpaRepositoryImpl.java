@@ -30,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
+import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationPropertyData;
+import org.apache.fineract.infrastructure.configuration.service.ConfigurationReadPlatformService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -54,6 +56,7 @@ import org.apache.fineract.useradministration.domain.Role;
 import org.apache.fineract.useradministration.domain.RoleRepository;
 import org.apache.fineract.useradministration.domain.UserDomainService;
 import org.apache.fineract.useradministration.exception.PasswordPreviouslyUsedException;
+import org.apache.fineract.useradministration.exception.ProhibitPasswordReuseGlobalConfigurationException;
 import org.apache.fineract.useradministration.exception.RoleNotFoundException;
 import org.apache.fineract.useradministration.exception.UserNotFoundException;
 import org.springframework.cache.annotation.CacheEvict;
@@ -84,6 +87,7 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
     private final StaffRepositoryWrapper staffRepositoryWrapper;
     private final ClientRepositoryWrapper clientRepositoryWrapper;
     private final PasswordEncoder passwordEncoder;
+    private final ConfigurationReadPlatformService configurationReadPlatformService;
 
     @Override
     @Transactional
@@ -239,9 +243,20 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
         String originalPassword = command.stringValueOfParameterNamed("password");
 
         AppUserPreviousPassword currentPasswordToSaveAsPreview = null;
+        Integer numberOfPreviousPasswords = 1000000;
+
+        GlobalConfigurationPropertyData restrictReuseOfPasswordConfig = configurationReadPlatformService
+                .retrieveGlobalConfiguration(AppUserApiConstant.RESTRICT_RE_USE_OF_PASSWORD);
+
+        if (!restrictReuseOfPasswordConfig.isEnabled()) {
+            throw new ProhibitPasswordReuseGlobalConfigurationException();
+        }
+        if (restrictReuseOfPasswordConfig.isEnabled() && restrictReuseOfPasswordConfig.getValue() > 0) {
+            numberOfPreviousPasswords = restrictReuseOfPasswordConfig.getValue().intValue();
+        }
 
         if (passWordEncodedValue != null) {
-            PageRequest pageRequest = PageRequest.of(0, AppUserApiConstant.numberOfPreviousPasswords, Sort.Direction.DESC, "removalDate");
+            PageRequest pageRequest = PageRequest.of(0, numberOfPreviousPasswords, Sort.Direction.DESC, "removalDate");
             final List<AppUserPreviousPassword> nLastUsedPasswords = this.appUserPreviewPasswordRepository.findByUserId(user.getId(),
                     pageRequest);
             // validate current password before saving it as preview
