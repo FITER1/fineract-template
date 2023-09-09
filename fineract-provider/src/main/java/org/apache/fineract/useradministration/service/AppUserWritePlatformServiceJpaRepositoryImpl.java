@@ -30,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
+import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationPropertyData;
+import org.apache.fineract.infrastructure.configuration.service.ConfigurationReadPlatformService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -54,6 +56,7 @@ import org.apache.fineract.useradministration.domain.Role;
 import org.apache.fineract.useradministration.domain.RoleRepository;
 import org.apache.fineract.useradministration.domain.UserDomainService;
 import org.apache.fineract.useradministration.exception.PasswordPreviouslyUsedException;
+import org.apache.fineract.useradministration.exception.ProhibitPasswordReuseGlobalConfigurationException;
 import org.apache.fineract.useradministration.exception.RoleNotFoundException;
 import org.apache.fineract.useradministration.exception.UserNotFoundException;
 import org.springframework.cache.annotation.CacheEvict;
@@ -63,6 +66,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
@@ -80,6 +85,8 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
     private final AppUserPreviousPasswordRepository appUserPreviewPasswordRepository;
     private final StaffRepositoryWrapper staffRepositoryWrapper;
     private final ClientRepositoryWrapper clientRepositoryWrapper;
+    private final PasswordEncoder passwordEncoder;
+    private final ConfigurationReadPlatformService configurationReadPlatformService;
 
     @Override
     @Transactional
@@ -230,25 +237,43 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
      * Encode the new submitted password and retrieve the last N used passwords to check if the current submitted
      * password matches with one of them.
      */
-    private AppUserPreviousPassword getCurrentPasswordToSaveAsPreview(final AppUser user, final JsonCommand command) {
+    public AppUserPreviousPassword getCurrentPasswordToSaveAsPreview(final AppUser user, final JsonCommand command) {
         final String passWordEncodedValue = user.getEncodedPassword(command, this.platformPasswordEncoder);
+        String originalPassword = command.stringValueOfParameterNamed("password");
 
         AppUserPreviousPassword currentPasswordToSaveAsPreview = null;
+        Integer numberOfPreviousPasswords = 1000000;
+
+        GlobalConfigurationPropertyData restrictReuseOfPasswordConfig = configurationReadPlatformService
+                .retrieveGlobalConfiguration(AppUserApiConstant.RESTRICT_RE_USE_OF_PASSWORD);
+
+        if (!restrictReuseOfPasswordConfig.isEnabled()) {
+            throw new ProhibitPasswordReuseGlobalConfigurationException();
+        }
+        if (restrictReuseOfPasswordConfig.isEnabled() && restrictReuseOfPasswordConfig.getValue() > 0) {
+            numberOfPreviousPasswords = restrictReuseOfPasswordConfig.getValue().intValue();
+        }
 
         if (passWordEncodedValue != null) {
-            PageRequest pageRequest = PageRequest.of(0, AppUserApiConstant.numberOfPreviousPasswords, Sort.Direction.DESC, "removalDate");
+            PageRequest pageRequest = PageRequest.of(0, numberOfPreviousPasswords, Sort.Direction.DESC, "removalDate");
             final List<AppUserPreviousPassword> nLastUsedPasswords = this.appUserPreviewPasswordRepository.findByUserId(user.getId(),
                     pageRequest);
+            // validate current password before saving it as preview
+            validatePasswordShouldNotBeReused(originalPassword, user.getPassword());
             for (AppUserPreviousPassword aPreviewPassword : nLastUsedPasswords) {
-                if (aPreviewPassword.getPassword().equals(passWordEncodedValue)) {
-                    throw new PasswordPreviouslyUsedException();
-                }
+                validatePasswordShouldNotBeReused(originalPassword, aPreviewPassword.getPassword());
             }
 
             currentPasswordToSaveAsPreview = new AppUserPreviousPassword(user);
         }
 
         return currentPasswordToSaveAsPreview;
+    }
+
+    private void validatePasswordShouldNotBeReused(String originalPassword, String aPreviewPassword) {
+        if (this.passwordEncoder.matches(originalPassword, aPreviewPassword)) {
+            throw new PasswordPreviouslyUsedException();
+        }
     }
 
     private Set<Role> assembleSetOfRoles(final String[] rolesArray) {
