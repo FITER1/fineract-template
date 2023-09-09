@@ -31,4 +31,8 @@ public interface AppUserWritePlatformService {
     CommandProcessingResult deleteUser(Long userId);
 
     AppUser saveUser(AppUser appUser);
+
+    CommandProcessingResult blockUser(Long userId, JsonCommand command);
+
+    CommandProcessingResult unblockUser(Long userId);
 }

@@ -122,59 +122,60 @@ public class AuthenticationApiResource {
         }
 
         try {
-        final Authentication authentication = new UsernamePasswordAuthenticationToken(request.username, request.password);
-        final Authentication authenticationCheck = this.customAuthenticationProvider.authenticate(authentication);
+            final Authentication authentication = new UsernamePasswordAuthenticationToken(request.username, request.password);
+            final Authentication authenticationCheck = this.customAuthenticationProvider.authenticate(authentication);
 
-        final Collection<String> permissions = new ArrayList<>();
-        AuthenticatedUserData authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setPermissions(permissions);
+            final Collection<String> permissions = new ArrayList<>();
+            AuthenticatedUserData authenticatedUserData = new AuthenticatedUserData().setUsername(request.username)
+                    .setPermissions(permissions);
 
-        if (authenticationCheck.isAuthenticated()) {
-            appUser.resetNoOfFailedLoginAttempts();
-            final Collection<GrantedAuthority> authorities = new ArrayList<>(authenticationCheck.getAuthorities());
-            for (final GrantedAuthority grantedAuthority : authorities) {
-                permissions.add(grantedAuthority.getAuthority());
+            if (authenticationCheck.isAuthenticated()) {
+                appUser.resetNoOfFailedLoginAttempts();
+                final Collection<GrantedAuthority> authorities = new ArrayList<>(authenticationCheck.getAuthorities());
+                for (final GrantedAuthority grantedAuthority : authorities) {
+                    permissions.add(grantedAuthority.getAuthority());
+                }
+
+                final byte[] base64EncodedAuthenticationKey = Base64.getEncoder()
+                        .encode((request.username + ":" + request.password).getBytes(StandardCharsets.UTF_8));
+
+                final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
+                final Collection<RoleData> roles = new ArrayList<>();
+                final Set<Role> userRoles = principal.getRoles();
+                for (final Role role : userRoles) {
+                    roles.add(role.toData());
+                }
+
+                final Long officeId = principal.getOffice().getId();
+                final String officeName = principal.getOffice().getName();
+
+                final Long staffId = principal.getStaffId();
+                final String staffDisplayName = principal.getStaffDisplayName();
+
+                final EnumOptionData organisationalRole = principal.organisationalRoleData();
+
+                boolean isTwoFactorRequired = this.twoFactorEnabled
+                        && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
+                Long userId = principal.getId();
+                if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
+                    authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
+                            .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
+                            .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
+                } else {
+
+                    authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
+                            .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
+                            .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions)
+                            .setUserId(principal.getId()).setAuthenticated(true)
+                            .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
+                            .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
+                            .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
+
+                }
+
             }
 
-            final byte[] base64EncodedAuthenticationKey = Base64.getEncoder()
-                    .encode((request.username + ":" + request.password).getBytes(StandardCharsets.UTF_8));
-
-            final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
-            final Collection<RoleData> roles = new ArrayList<>();
-            final Set<Role> userRoles = principal.getRoles();
-            for (final Role role : userRoles) {
-                roles.add(role.toData());
-            }
-
-            final Long officeId = principal.getOffice().getId();
-            final String officeName = principal.getOffice().getName();
-
-            final Long staffId = principal.getStaffId();
-            final String staffDisplayName = principal.getStaffDisplayName();
-
-            final EnumOptionData organisationalRole = principal.organisationalRoleData();
-
-            boolean isTwoFactorRequired = this.twoFactorEnabled
-                    && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
-            Long userId = principal.getId();
-            if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
-                authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
-                        .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
-                        .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
-            } else {
-
-                authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
-                        .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
-                        .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
-                        .setAuthenticated(true)
-                        .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
-                        .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
-                        .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
-
-            }
-
-        }
-
-        return this.apiJsonSerializerService.serialize(authenticatedUserData);
+            return this.apiJsonSerializerService.serialize(authenticatedUserData);
         } catch (AuthenticationException e) {
             appUser.incrementNoOfFailedLoginAttempts();
             int noOfFailedLoginAttempts = appUser.getNoOfFailedLoginAttempts();

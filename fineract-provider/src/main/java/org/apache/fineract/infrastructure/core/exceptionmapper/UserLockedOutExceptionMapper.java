@@ -34,6 +34,7 @@ public class UserLockedOutExceptionMapper implements ExceptionMapper<UserLockedO
 
     @Override
     public Response toResponse(@SuppressWarnings("unused") final UserLockedOutException exception) {
-        return Response.status(Response.Status.FORBIDDEN).entity(ApiGlobalErrorResponse.userLockedOut()).type(MediaType.APPLICATION_JSON).build();
+        return Response.status(Response.Status.FORBIDDEN).entity(ApiGlobalErrorResponse.userLockedOut()).type(MediaType.APPLICATION_JSON)
+                .build();
     }
 }

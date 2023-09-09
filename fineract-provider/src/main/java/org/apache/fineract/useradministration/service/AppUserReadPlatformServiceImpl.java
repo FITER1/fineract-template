@@ -128,6 +128,9 @@ public class AppUserReadPlatformServiceImpl implements AppUserReadPlatformServic
                 user.getOffice().getName(), user.getFirstname(), user.getLastname(), availableRoles, null, selectedUserRoles, linkedStaff,
                 user.getPasswordNeverExpires(), user.isSelfServiceUser());
 
+        // check whether user is blocked or not
+        retUser.setLockedOut(user.isLockedOut());
+
         if (retUser.isSelfServiceUser()) {
             Set<ClientData> clients = new HashSet<>();
             for (AppUserClientMapping clientMap : user.getAppUserClientMappings()) {
