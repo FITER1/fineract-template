@@ -46,6 +46,9 @@ public final class UserHelper {
     private static boolean simpleUserCreated = false;
     private static String simpleUsername;
 
+    private static final String BLOCK_USER_COMMAND = "block";
+    private static final String UNBLOCK_USER_COMMAND = "unblock";
+
     private UserHelper() {}
 
     public static Integer createUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec, int roleId,
@@ -124,6 +127,10 @@ public final class UserHelper {
                 + "\"], \"sendPasswordToEmail\": false," + "\"isSelfServiceUser\" : true," + "\"clients\" : [\"" + clientId + "\"]}";
     }
 
+    private static String getTestBlockUserAsJSON(int blockDays) {
+        return "{ \"locale\": \"es\", \"blockDays\": \"" + blockDays + "\"}";
+    }
+
     public static Integer deleteUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec,
             final Integer userId) {
         return Utils.performServerDelete(requestSpec, responseSpec, createRoleOperationURL(userId), "resourceId");
@@ -135,8 +142,22 @@ public final class UserHelper {
                 attribute);
     }
 
+    public static Object blockUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec, int userId,
+                                    int blockDays, String attribute) {
+        return Utils.performServerPost(requestSpec, responseSpec, createUserCommandOperationURL(BLOCK_USER_COMMAND, userId), getTestBlockUserAsJSON(blockDays),
+                attribute);
+    }
+
+    public static Object unblockUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec, int userId, String attribute) {
+        return Utils.performServerPost(requestSpec, responseSpec, createUserCommandOperationURL(UNBLOCK_USER_COMMAND, userId), attribute);
+    }
+
     private static String createRoleOperationURL(final Integer userId) {
         return USER_URL + "/" + userId + "?" + Utils.TENANT_IDENTIFIER;
+    }
+
+    private static String createUserCommandOperationURL(final String command, final Integer userId) {
+        return USER_URL + "/" + userId + "?command=" + command + "&" + Utils.TENANT_IDENTIFIER;
     }
 
     public static RequestSpecification getSimpleUserWithoutBypassPermission(final RequestSpecification requestSpec,
