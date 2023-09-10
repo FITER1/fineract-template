@@ -131,11 +131,14 @@ public class LoanRepaymentScheduleInstallment extends AbstractAuditableWithUTCDa
     @Column(name = "credits_amount", scale = 6, precision = 19, nullable = true)
     private BigDecimal credits;
 
+    @Column(name = "is_down_payment", nullable = false)
+    private boolean isDownPayment;
+
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, mappedBy = "loanRepaymentScheduleInstallment")
     private Set<LoanInterestRecalcualtionAdditionalDetails> loanCompoundingDetails = new HashSet<>();
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER, mappedBy = "loanRepaymentScheduleInstallment")
-    private Set<PostDatedChecks> postDatedChecks;
+    private Set<PostDatedChecks> postDatedChecks = new HashSet<>();
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, mappedBy = "installment")
     private Set<LoanInstallmentCharge> installmentCharges = new HashSet<>();
@@ -154,6 +157,15 @@ public class LoanRepaymentScheduleInstallment extends AbstractAuditableWithUTCDa
             final LocalDate dueDate, final BigDecimal principal, final BigDecimal interest, final BigDecimal feeCharges,
             final BigDecimal penaltyCharges, final boolean recalculatedInterestComponent,
             final Set<LoanInterestRecalcualtionAdditionalDetails> compoundingDetails, final BigDecimal rescheduleInterestPortion) {
+        this(loan, installmentNumber, fromDate, dueDate, principal, interest, feeCharges, penaltyCharges, recalculatedInterestComponent,
+                compoundingDetails, rescheduleInterestPortion, false);
+    }
+
+    public LoanRepaymentScheduleInstallment(final Loan loan, final Integer installmentNumber, final LocalDate fromDate,
+            final LocalDate dueDate, final BigDecimal principal, final BigDecimal interest, final BigDecimal feeCharges,
+            final BigDecimal penaltyCharges, final boolean recalculatedInterestComponent,
+            final Set<LoanInterestRecalcualtionAdditionalDetails> compoundingDetails, final BigDecimal rescheduleInterestPortion,
+            final boolean isDownPayment) {
         this.loan = loan;
         this.installmentNumber = installmentNumber;
         this.fromDate = fromDate;
@@ -169,6 +181,7 @@ public class LoanRepaymentScheduleInstallment extends AbstractAuditableWithUTCDa
         }
         this.loanCompoundingDetails = compoundingDetails;
         this.rescheduleInterestPortion = rescheduleInterestPortion;
+        this.isDownPayment = isDownPayment;
     }
 
     public LoanRepaymentScheduleInstallment(final Loan loan, final Integer installmentNumber, final LocalDate fromDate,
@@ -858,8 +871,7 @@ public class LoanRepaymentScheduleInstallment extends AbstractAuditableWithUTCDa
         }
     }
 
-    public void updateDueAndCredits(final LocalDate transactionDate, final Money transactionAmount) {
-        updateDueDate(transactionDate);
+    public void updateCredits(final LocalDate transactionDate, final Money transactionAmount) {
         addToCredits(transactionAmount.getAmount());
         addToPrincipal(transactionDate, transactionAmount);
     }
@@ -918,6 +930,10 @@ public class LoanRepaymentScheduleInstallment extends AbstractAuditableWithUTCDa
 
     public Set<LoanTransactionToRepaymentScheduleMapping> getLoanTransactionToRepaymentScheduleMappings() {
         return this.loanTransactionToRepaymentScheduleMappings;
+    }
+
+    public boolean isDownPayment() {
+        return isDownPayment;
     }
 
 }

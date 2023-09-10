@@ -113,6 +113,7 @@ final class LoanProductsApiResourceSwagger {
         public Integer interestCalculationPeriodType;
         @Schema(example = "mifos-standard-strategy")
         public String transactionProcessingStrategyCode;
+        public List<AdvancedPaymentData> paymentAllocation;
         @Schema(example = "false")
         public Boolean isLinkedToFloatingInterestRates;
         @Schema(example = "false")
@@ -155,6 +156,14 @@ final class LoanProductsApiResourceSwagger {
         public Integer dueDaysForRepaymentEvent;
         @Schema(example = "3")
         public Integer overDueDaysForRepaymentEvent;
+        @Schema(example = "false")
+        public Boolean enableDownPayment;
+        @Schema(example = "5.5")
+        public BigDecimal disbursedAmountPercentageForDownPayment;
+        @Schema(example = "false")
+        public Boolean enableAutoRepaymentForDownPayment;
+        @Schema(example = "1")
+        public Integer repaymentStartDateType;
 
         // Interest Recalculation
         @Schema(example = "false")
@@ -412,6 +421,18 @@ final class LoanProductsApiResourceSwagger {
             public String description;
         }
 
+        static final class GetLoanProductsRepaymentStartDateType {
+
+            private GetLoanProductsRepaymentStartDateType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "repaymentStartDateType.disbursementDate")
+            public String code;
+            @Schema(example = "Disbursement Date")
+            public String description;
+        }
+
         static final class GetLoanProductsInterestRecalculationData {
 
             private GetLoanProductsInterestRecalculationData() {}
@@ -555,6 +576,7 @@ final class LoanProductsApiResourceSwagger {
         public GetLoanProductsResponse.GetLoanProductsAccountingRule accountingRule;
         @Schema(example = "0")
         public Integer principalThresholdForLastInstalment;
+        public GetLoanProductsResponse.GetLoanProductsRepaymentStartDateType repaymentStartDateType;
     }
 
     @Schema(description = "GetLoanProductsTemplateResponse")
@@ -791,7 +813,7 @@ final class LoanProductsApiResourceSwagger {
             public Boolean penalty;
             public GetLoanProductsCurrencyOptions currency;
             @Schema(example = "100")
-            public Long amount;
+            public BigDecimal amount;
             public GetLoanChargeTimeType chargeTimeType;
             public GetLoanProductsChargeAppliesTo chargeAppliesTo;
             public GetLoanChargeCalculationType chargeCalculationType;
@@ -843,7 +865,7 @@ final class LoanProductsApiResourceSwagger {
                 @Schema(example = "over payment")
                 public String name;
                 @Schema(example = "13")
-                public Integer glCode;
+                public String glCode;
                 @Schema(example = "false")
                 public Boolean disabled;
                 @Schema(example = "true")
@@ -866,7 +888,7 @@ final class LoanProductsApiResourceSwagger {
                 @Schema(example = "Loan portfolio")
                 public String name;
                 @Schema(example = "02")
-                public Integer glCode;
+                public String glCode;
                 @Schema(example = "false")
                 public Boolean disabled;
                 @Schema(example = "true")
@@ -901,7 +923,7 @@ final class LoanProductsApiResourceSwagger {
                 @Schema(example = "loans written off 2")
                 public String name;
                 @Schema(example = "12")
-                public Integer glCode;
+                public String glCode;
                 @Schema(example = "false")
                 public Boolean disabled;
                 @Schema(example = "true")
@@ -936,7 +958,7 @@ final class LoanProductsApiResourceSwagger {
                 @Schema(example = "income from interest")
                 public String name;
                 @Schema(example = "04")
-                public Integer glCode;
+                public String glCode;
                 @Schema(example = "false")
                 public Boolean disabled;
                 @Schema(example = "true")
@@ -1008,6 +1030,10 @@ final class LoanProductsApiResourceSwagger {
         public Set<GetLoanProductsResponse.GetLoanProductsInterestRecalculationData.GetLoanProductsInterestRecalculationCompoundingType> interestRecalculationCompoundingTypeOptions;
         public Set<GetLoanProductsResponse.GetLoanProductsInterestRecalculationData.GetLoanProductsRescheduleStrategyType> rescheduleStrategyTypeOptions;
         public Set<GetLoanProductsResponse.GetLoanProductsInterestRecalculationData.GetLoanProductsInterestRecalculationCompoundingFrequencyType> interestRecalculationFrequencyTypeOptions;
+        public Set<GetLoanProductsResponse.GetLoanProductsRepaymentStartDateType> repaymentStartDateTypeOptions;
+        public List<EnumOptionData> advancedPaymentAllocationTransactionTypes;
+        public List<EnumOptionData> advancedPaymentAllocationFutureInstallmentAllocationRules;
+        public List<EnumOptionData> advancedPaymentAllocationTypes;
     }
 
     @Schema(description = "GetLoanProductsProductIdResponse")
@@ -1024,6 +1050,18 @@ final class LoanProductsApiResourceSwagger {
             @Schema(example = "interestRateFrequency.periodFrequencyType.months")
             public String code;
             @Schema(example = "Per month")
+            public String description;
+        }
+
+        static final class GetLoanProductsRepaymentStartDateType {
+
+            private GetLoanProductsRepaymentStartDateType() {}
+
+            @Schema(example = "1")
+            public Long id;
+            @Schema(example = "repaymentStartDateType.disbursementDate")
+            public String code;
+            @Schema(example = "Disbursement Date")
             public String description;
         }
 
@@ -1174,6 +1212,8 @@ final class LoanProductsApiResourceSwagger {
         @Schema(example = "Mifos style")
         public String transactionProcessingStrategyName;
         @Schema(example = "[]")
+        public List<AdvancedPaymentData> paymentAllocation;
+        @Schema(example = "[]")
         public List<Integer> charges;
         public Set<GetLoanProductsPrincipalVariationsForBorrowerCycle> productsPrincipalVariationsForBorrowerCycle;
         @Schema(example = "[]")
@@ -1203,6 +1243,13 @@ final class LoanProductsApiResourceSwagger {
         public Integer overDueDaysForRepaymentEvent;
         @Schema(example = "3")
         public Integer inArrearsTolerance;
+        @Schema(example = "false")
+        public Boolean enableDownPayment;
+        @Schema(example = "5.5")
+        public BigDecimal disbursedAmountPercentageForDownPayment;
+        @Schema(example = "false")
+        public Boolean enableAutoRepaymentForDownPayment;
+        public GetLoanProductsRepaymentStartDateType repaymentStartDateType;
     }
 
     @Schema(description = "PutLoanProductsProductIdRequest")
@@ -1282,6 +1329,7 @@ final class LoanProductsApiResourceSwagger {
         public Integer interestCalculationPeriodType;
         @Schema(example = "mifos-standard-strategy")
         public String transactionProcessingStrategyCode;
+        public List<AdvancedPaymentData> paymentAllocation;
         @Schema(example = "false")
         public Boolean isLinkedToFloatingInterestRates;
         @Schema(example = "false")
@@ -1324,6 +1372,14 @@ final class LoanProductsApiResourceSwagger {
         public Integer dueDaysForRepaymentEvent;
         @Schema(example = "3")
         public Integer overDueDaysForRepaymentEvent;
+        @Schema(example = "false")
+        public Boolean enableDownPayment;
+        @Schema(example = "5.5")
+        public BigDecimal disbursedAmountPercentageForDownPayment;
+        @Schema(example = "false")
+        public Boolean enableAutoRepaymentForDownPayment;
+        @Schema(example = "1")
+        public Integer repaymentStartDateType;
 
         // Interest Recalculation
         @Schema(example = "false")
@@ -1465,6 +1521,26 @@ final class LoanProductsApiResourceSwagger {
             public boolean active;
         }
 
+    }
+
+    public static final class AdvancedPaymentData {
+
+        @Schema(example = "DEFAULT")
+        public String transactionType;
+        @Schema(example = "[]")
+        public List<PaymentAllocationOrder> paymentAllocationOrder;
+
+        @Schema(example = "NEXT_INSTALLMENT")
+        public String futureInstallmentAllocationRule;
+    }
+
+    public static class PaymentAllocationOrder {
+
+        @Schema(example = "DUE_PAST_PENALTY")
+        public String paymentAllocationRule;
+
+        @Schema(example = "1")
+        public Integer order;
     }
 
     @Schema(description = "PutLoanProductsProductIdResponse")

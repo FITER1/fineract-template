@@ -48,6 +48,7 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.serialization.DefaultToApiJsonSerializer;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.core.service.MathUtil;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.interoperation.data.InteropAccountData;
@@ -76,7 +77,6 @@ import org.apache.fineract.interoperation.exception.InteropTransferAlreadyCommit
 import org.apache.fineract.interoperation.exception.InteropTransferAlreadyOnHoldException;
 import org.apache.fineract.interoperation.exception.InteropTransferMissingException;
 import org.apache.fineract.interoperation.serialization.InteropDataValidator;
-import org.apache.fineract.interoperation.util.MathUtil;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrency;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrencyRepository;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
@@ -233,7 +233,7 @@ public class InteropServiceImpl implements InteropService {
         SavingsAccount savingsAccount = validateAndGetSavingAccount(accountId);
 
         Predicate<SavingsAccountTransaction> transFilter = t -> {
-            SavingsAccountTransactionType transactionType = SavingsAccountTransactionType.fromInt(t.getTypeOf());
+            SavingsAccountTransactionType transactionType = t.getTransactionType();
             if (debit != transactionType.isDebit() && credit != transactionType.isCredit()) {
                 return false;
             }

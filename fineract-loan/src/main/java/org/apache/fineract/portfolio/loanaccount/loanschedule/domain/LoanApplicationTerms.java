@@ -51,6 +51,7 @@ import org.apache.fineract.portfolio.loanproduct.domain.LoanPreClosureInterestCa
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRelatedDetail;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanRescheduleStrategyMethod;
 import org.apache.fineract.portfolio.loanproduct.domain.RecalculationFrequencyType;
+import org.apache.fineract.portfolio.loanproduct.domain.RepaymentStartDateType;
 
 @Slf4j
 public final class LoanApplicationTerms {
@@ -207,6 +208,12 @@ public final class LoanApplicationTerms {
     private final BigDecimal fixedPrincipalPercentagePerInstallment;
 
     private LocalDate newScheduledDueDateStart;
+    private boolean isDownPaymentEnabled;
+    private BigDecimal disbursedAmountPercentageForDownPayment;
+    private boolean isAutoRepaymentForDownPaymentEnabled;
+
+    private RepaymentStartDateType repaymentStartDateType;
+    private LocalDate submittedOnDate;
 
     public static LoanApplicationTerms assembleFrom(final ApplicationCurrency currency, final Integer loanTermFrequency,
             final PeriodFrequencyType loanTermPeriodFrequencyType, final Integer numberOfRepayments, final Integer repaymentEvery,
@@ -230,7 +237,10 @@ public final class LoanApplicationTerms {
             Boolean isInterestChargedFromDateSameAsDisbursalDateEnabled, final Integer numberOfDays,
             boolean isSkipRepaymentOnFirstDayOfMonth, final HolidayDetailDTO holidayDetailDTO, final boolean allowCompoundingOnEod,
             final boolean isEqualAmortization, final boolean isInterestToBeRecoveredFirstWhenGreaterThanEMI,
-            final BigDecimal fixedPrincipalPercentagePerInstallment, final boolean isPrincipalCompoundingDisabledForOverdueLoans) {
+            final BigDecimal fixedPrincipalPercentagePerInstallment, final boolean isPrincipalCompoundingDisabledForOverdueLoans,
+            final Boolean enableDownPayment, final BigDecimal disbursedAmountPercentageForDownPayment,
+            final Boolean isAutoRepaymentForDownPaymentEnabled, final RepaymentStartDateType repaymentStartDateType,
+            final LocalDate submittedOnDate) {
 
         final LoanRescheduleStrategyMethod rescheduleStrategyMethod = null;
         final CalendarHistoryDataWrapper calendarHistoryDataWrapper = null;
@@ -247,7 +257,8 @@ public final class LoanApplicationTerms {
                 calendarHistoryDataWrapper, isInterestChargedFromDateSameAsDisbursalDateEnabled, numberOfDays,
                 isSkipRepaymentOnFirstDayOfMonth, holidayDetailDTO, allowCompoundingOnEod, isEqualAmortization, false,
                 isInterestToBeRecoveredFirstWhenGreaterThanEMI, fixedPrincipalPercentagePerInstallment,
-                isPrincipalCompoundingDisabledForOverdueLoans);
+                isPrincipalCompoundingDisabledForOverdueLoans, enableDownPayment, disbursedAmountPercentageForDownPayment,
+                isAutoRepaymentForDownPaymentEnabled, repaymentStartDateType, submittedOnDate);
 
     }
 
@@ -267,7 +278,8 @@ public final class LoanApplicationTerms {
             final CalendarHistoryDataWrapper calendarHistoryDataWrapper, final Integer numberOfDays,
             final boolean isSkipRepaymentOnFirstDayOfMonth, final HolidayDetailDTO holidayDetailDTO, final boolean allowCompoundingOnEod,
             final boolean isFirstRepaymentDateAllowedOnHoliday, final boolean isInterestToBeRecoveredFirstWhenGreaterThanEMI,
-            final BigDecimal fixedPrincipalPercentagePerInstallment, final boolean isPrincipalCompoundingDisabledForOverdueLoans) {
+            final BigDecimal fixedPrincipalPercentagePerInstallment, final boolean isPrincipalCompoundingDisabledForOverdueLoans,
+            final RepaymentStartDateType repaymentStartDateType, final LocalDate submittedOnDate) {
 
         final Integer numberOfRepayments = loanProductRelatedDetail.getNumberOfRepayments();
         final Integer repaymentEvery = loanProductRelatedDetail.getRepayEvery();
@@ -293,6 +305,13 @@ public final class LoanApplicationTerms {
         final boolean isInterestRecalculationEnabled = loanProductRelatedDetail.isInterestRecalculationEnabled();
         final boolean isInterestChargedFromDateSameAsDisbursalDateEnabled = false;
         final boolean isEqualAmortization = loanProductRelatedDetail.isEqualAmortization();
+        final boolean isDownPaymentEnabled = loanProductRelatedDetail.isEnableDownPayment();
+        BigDecimal disbursedAmountPercentageForDownPayment = null;
+        boolean isAutoRepaymentForDownPaymentEnabled = false;
+        if (isDownPaymentEnabled) {
+            disbursedAmountPercentageForDownPayment = loanProductRelatedDetail.getDisbursedAmountPercentageForDownPayment();
+            isAutoRepaymentForDownPaymentEnabled = loanProductRelatedDetail.isEnableAutoRepaymentForDownPayment();
+        }
         return new LoanApplicationTerms(applicationCurrency, loanTermFrequency, loanTermPeriodFrequencyType, numberOfRepayments,
                 repaymentEvery, repaymentPeriodFrequencyType, ((nthDay != null) ? nthDay.getValue() : null), dayOfWeek, amortizationMethod,
                 interestMethod, interestRatePerPeriod, interestRatePeriodFrequencyType, annualNominalInterestRate,
@@ -307,7 +326,8 @@ public final class LoanApplicationTerms {
                 isInterestChargedFromDateSameAsDisbursalDateEnabled, numberOfDays, isSkipRepaymentOnFirstDayOfMonth, holidayDetailDTO,
                 allowCompoundingOnEod, isEqualAmortization, isFirstRepaymentDateAllowedOnHoliday,
                 isInterestToBeRecoveredFirstWhenGreaterThanEMI, fixedPrincipalPercentagePerInstallment,
-                isPrincipalCompoundingDisabledForOverdueLoans);
+                isPrincipalCompoundingDisabledForOverdueLoans, isDownPaymentEnabled, disbursedAmountPercentageForDownPayment,
+                isAutoRepaymentForDownPaymentEnabled, repaymentStartDateType, submittedOnDate);
     }
 
     private LoanApplicationTerms(final ApplicationCurrency currency, final Integer loanTermFrequency,
@@ -333,7 +353,9 @@ public final class LoanApplicationTerms {
             final Integer numberOfDays, final boolean isSkipRepaymentOnFirstDayOfMonth, final HolidayDetailDTO holidayDetailDTO,
             final boolean allowCompoundingOnEod, final boolean isEqualAmortization, final boolean isFirstRepaymentDateAllowedOnHoliday,
             final boolean isInterestToBeRecoveredFirstWhenGreaterThanEMI, final BigDecimal fixedPrincipalPercentagePerInstallment,
-            final boolean isPrincipalCompoundingDisabledForOverdueLoans) {
+            final boolean isPrincipalCompoundingDisabledForOverdueLoans, final boolean isDownPaymentEnabled,
+            final BigDecimal disbursedAmountPercentageForDownPayment, final boolean isAutoRepaymentForDownPaymentEnabled,
+            final RepaymentStartDateType repaymentStartDateType, final LocalDate submittedOnDate) {
 
         this.currency = currency;
         this.loanTermFrequency = loanTermFrequency;
@@ -410,6 +432,11 @@ public final class LoanApplicationTerms {
         this.isInterestToBeRecoveredFirstWhenGreaterThanEMI = isInterestToBeRecoveredFirstWhenGreaterThanEMI;
         this.fixedPrincipalPercentagePerInstallment = fixedPrincipalPercentagePerInstallment;
         this.isPrincipalCompoundingDisabledForOverdueLoans = isPrincipalCompoundingDisabledForOverdueLoans;
+        this.isDownPaymentEnabled = isDownPaymentEnabled;
+        this.disbursedAmountPercentageForDownPayment = disbursedAmountPercentageForDownPayment;
+        this.isAutoRepaymentForDownPaymentEnabled = isAutoRepaymentForDownPaymentEnabled;
+        this.repaymentStartDateType = repaymentStartDateType;
+        this.submittedOnDate = submittedOnDate;
     }
 
     public Money adjustPrincipalIfLastRepaymentPeriod(final Money principalForPeriod, final Money totalCumulativePrincipalToDate,
@@ -1253,7 +1280,8 @@ public final class LoanApplicationTerms {
                 this.repaymentPeriodFrequencyType, this.numberOfRepayments, this.principalGrace, this.recurringMoratoriumOnPrincipalPeriods,
                 this.interestPaymentGrace, this.interestChargingGrace, this.amortizationMethod, this.inArrearsTolerance.getAmount(),
                 this.graceOnArrearsAgeing, this.daysInMonthType.getValue(), this.daysInYearType.getValue(),
-                this.interestRecalculationEnabled, this.isEqualAmortization);
+                this.interestRecalculationEnabled, this.isEqualAmortization, this.isDownPaymentEnabled,
+                this.disbursedAmountPercentageForDownPayment, this.isAutoRepaymentForDownPaymentEnabled);
     }
 
     public Integer getLoanTermFrequency() {
@@ -1717,5 +1745,21 @@ public final class LoanApplicationTerms {
 
     public void setNewScheduledDueDateStart(LocalDate newScheduledDueDateStart) {
         this.newScheduledDueDateStart = newScheduledDueDateStart;
+    }
+
+    public boolean isDownPaymentEnabled() {
+        return isDownPaymentEnabled;
+    }
+
+    public BigDecimal getDisbursedAmountPercentageForDownPayment() {
+        return disbursedAmountPercentageForDownPayment;
+    }
+
+    public RepaymentStartDateType getRepaymentStartDateType() {
+        return repaymentStartDateType;
+    }
+
+    public LocalDate getSubmittedOnDate() {
+        return submittedOnDate;
     }
 }

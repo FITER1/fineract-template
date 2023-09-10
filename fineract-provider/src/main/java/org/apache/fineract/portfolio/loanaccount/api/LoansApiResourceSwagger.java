@@ -1074,6 +1074,12 @@ final class LoansApiResourceSwagger {
         public Boolean chargedOff;
         @Schema(example = "3")
         public Integer inArrearsTolerance;
+        @Schema(example = "false")
+        public Boolean enableDownPayment;
+        @Schema(example = "0.000000")
+        public BigDecimal disbursedAmountPercentageForDownPayment;
+        @Schema(example = "false")
+        public Boolean enableAutoRepaymentForDownPayment;
     }
 
     @Schema(description = "GetLoansResponse")
