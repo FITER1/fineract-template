@@ -3654,4 +3654,20 @@ public class CommandWrapperBuilder {
         this.href = "/loans/" + loanId + "/transactions?command=downPayment";
         return this;
     }
+
+    public CommandWrapperBuilder blockUser(final Long userId) {
+        this.actionName = "BLOCK";
+        this.entityName = "USER";
+        this.entityId = userId;
+        this.href = "/users/" + userId;
+        return this;
+    }
+
+    public CommandWrapperBuilder unblockUser(final Long userId) {
+        this.actionName = "UNBLOCK";
+        this.entityName = "USER";
+        this.entityId = userId;
+        this.href = "/users/" + userId;
+        return this;
+    }
 }
