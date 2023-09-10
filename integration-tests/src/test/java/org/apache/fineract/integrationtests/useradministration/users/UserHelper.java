@@ -143,12 +143,13 @@ public final class UserHelper {
     }
 
     public static Object blockUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec, int userId,
-                                    int blockDays, String attribute) {
-        return Utils.performServerPost(requestSpec, responseSpec, createUserCommandOperationURL(BLOCK_USER_COMMAND, userId), getTestBlockUserAsJSON(blockDays),
-                attribute);
+            int blockDays, String attribute) {
+        return Utils.performServerPost(requestSpec, responseSpec, createUserCommandOperationURL(BLOCK_USER_COMMAND, userId),
+                getTestBlockUserAsJSON(blockDays), attribute);
     }
 
-    public static Object unblockUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec, int userId, String attribute) {
+    public static Object unblockUser(final RequestSpecification requestSpec, final ResponseSpecification responseSpec, int userId,
+            String attribute) {
         return Utils.performServerPost(requestSpec, responseSpec, createUserCommandOperationURL(UNBLOCK_USER_COMMAND, userId), attribute);
     }
 
