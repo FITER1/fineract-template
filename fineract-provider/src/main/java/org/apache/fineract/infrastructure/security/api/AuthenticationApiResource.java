@@ -41,9 +41,11 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.apache.fineract.infrastructure.configuration.service.ConfigurationReadPlatformService;
 import org.apache.fineract.infrastructure.core.data.EnumOptionData;
 import org.apache.fineract.infrastructure.core.serialization.ToApiJsonSerializer;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.security.constants.AccountLockConfigurationConstants;
 import org.apache.fineract.infrastructure.security.constants.TwoFactorConstants;
 import org.apache.fineract.infrastructure.security.data.AuthenticatedUserData;
 import org.apache.fineract.infrastructure.security.exception.UserLockedOutException;
@@ -74,12 +76,6 @@ public class AuthenticationApiResource {
     @Value("${fineract.security.2fa.enabled}")
     private boolean twoFactorEnabled;
 
-    @Value("${fineract.security.failed-login-attempt-before-lockout-count}")
-    private int noOfFailedLoginAttemptBeforeLockout;
-
-    @Value("${fineract.security.failed-login-lockout-duration}")
-    private int lockoutDuration;
-
     public static class AuthenticateRequest {
 
         public String username;
@@ -93,6 +89,7 @@ public class AuthenticationApiResource {
     private final ClientReadPlatformService clientReadPlatformService;
     private final PlatformUserDetailsService platformUserDetailsService;
     private final AppUserWritePlatformService appUserWritePlatformService;
+    private final ConfigurationReadPlatformService configurationReadPlatformService;
 
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -116,65 +113,71 @@ public class AuthenticationApiResource {
                     + apiRequestBodyAsJson + "; username=" + request.username + ", password=" + request.password);
         }
 
+        int noOfFailedLoginAttemptBeforeLockout = configurationReadPlatformService
+                .retrieveGlobalConfiguration(AccountLockConfigurationConstants.FAILED_LOGIN_ATTEMPTS).getValue().intValue();
+        int lockoutDuration = configurationReadPlatformService
+                .retrieveGlobalConfiguration(AccountLockConfigurationConstants.ACCOUNT_LOCK_DURATION).getValue().intValue();
+
         AppUser appUser = (AppUser) platformUserDetailsService.loadUserByUsername(request.username);
         if (appUser.isLockedOut()) {
             throw new UserLockedOutException();
         }
 
         try {
-        final Authentication authentication = new UsernamePasswordAuthenticationToken(request.username, request.password);
-        final Authentication authenticationCheck = this.customAuthenticationProvider.authenticate(authentication);
+            final Authentication authentication = new UsernamePasswordAuthenticationToken(request.username, request.password);
+            final Authentication authenticationCheck = this.customAuthenticationProvider.authenticate(authentication);
 
-        final Collection<String> permissions = new ArrayList<>();
-        AuthenticatedUserData authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setPermissions(permissions);
+            final Collection<String> permissions = new ArrayList<>();
+            AuthenticatedUserData authenticatedUserData = new AuthenticatedUserData().setUsername(request.username)
+                    .setPermissions(permissions);
 
-        if (authenticationCheck.isAuthenticated()) {
-            appUser.resetNoOfFailedLoginAttempts();
-            final Collection<GrantedAuthority> authorities = new ArrayList<>(authenticationCheck.getAuthorities());
-            for (final GrantedAuthority grantedAuthority : authorities) {
-                permissions.add(grantedAuthority.getAuthority());
+            if (authenticationCheck.isAuthenticated()) {
+                appUser.resetNoOfFailedLoginAttempts();
+                final Collection<GrantedAuthority> authorities = new ArrayList<>(authenticationCheck.getAuthorities());
+                for (final GrantedAuthority grantedAuthority : authorities) {
+                    permissions.add(grantedAuthority.getAuthority());
+                }
+
+                final byte[] base64EncodedAuthenticationKey = Base64.getEncoder()
+                        .encode((request.username + ":" + request.password).getBytes(StandardCharsets.UTF_8));
+
+                final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
+                final Collection<RoleData> roles = new ArrayList<>();
+                final Set<Role> userRoles = principal.getRoles();
+                for (final Role role : userRoles) {
+                    roles.add(role.toData());
+                }
+
+                final Long officeId = principal.getOffice().getId();
+                final String officeName = principal.getOffice().getName();
+
+                final Long staffId = principal.getStaffId();
+                final String staffDisplayName = principal.getStaffDisplayName();
+
+                final EnumOptionData organisationalRole = principal.organisationalRoleData();
+
+                boolean isTwoFactorRequired = this.twoFactorEnabled
+                        && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
+                Long userId = principal.getId();
+                if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
+                    authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
+                            .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
+                            .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
+                } else {
+
+                    authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
+                            .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
+                            .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions)
+                            .setUserId(principal.getId()).setAuthenticated(true)
+                            .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
+                            .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
+                            .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
+
+                }
+
             }
 
-            final byte[] base64EncodedAuthenticationKey = Base64.getEncoder()
-                    .encode((request.username + ":" + request.password).getBytes(StandardCharsets.UTF_8));
-
-            final AppUser principal = (AppUser) authenticationCheck.getPrincipal();
-            final Collection<RoleData> roles = new ArrayList<>();
-            final Set<Role> userRoles = principal.getRoles();
-            for (final Role role : userRoles) {
-                roles.add(role.toData());
-            }
-
-            final Long officeId = principal.getOffice().getId();
-            final String officeName = principal.getOffice().getName();
-
-            final Long staffId = principal.getStaffId();
-            final String staffDisplayName = principal.getStaffDisplayName();
-
-            final EnumOptionData organisationalRole = principal.organisationalRoleData();
-
-            boolean isTwoFactorRequired = this.twoFactorEnabled
-                    && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
-            Long userId = principal.getId();
-            if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
-                authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setUserId(userId)
-                        .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
-                        .setAuthenticated(true).setShouldRenewPassword(true).setTwoFactorAuthenticationRequired(isTwoFactorRequired);
-            } else {
-
-                authenticatedUserData = new AuthenticatedUserData().setUsername(request.username).setOfficeId(officeId)
-                        .setOfficeName(officeName).setStaffId(staffId).setStaffDisplayName(staffDisplayName)
-                        .setOrganisationalRole(organisationalRole).setRoles(roles).setPermissions(permissions).setUserId(principal.getId())
-                        .setAuthenticated(true)
-                        .setBase64EncodedAuthenticationKey(new String(base64EncodedAuthenticationKey, StandardCharsets.UTF_8))
-                        .setTwoFactorAuthenticationRequired(isTwoFactorRequired)
-                        .setClients(returnClientList ? clientReadPlatformService.retrieveUserClients(userId) : null);
-
-            }
-
-        }
-
-        return this.apiJsonSerializerService.serialize(authenticatedUserData);
+            return this.apiJsonSerializerService.serialize(authenticatedUserData);
         } catch (AuthenticationException e) {
             appUser.incrementNoOfFailedLoginAttempts();
             int noOfFailedLoginAttempts = appUser.getNoOfFailedLoginAttempts();

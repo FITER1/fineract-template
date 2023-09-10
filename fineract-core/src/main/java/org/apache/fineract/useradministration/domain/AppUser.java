@@ -751,6 +751,14 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
         this.canLoginAfter = canLoginAfter;
     }
 
+    public LocalDateTime getCanLoginAfter() {
+        return this.canLoginAfter;
+    }
+
+    public void setNoOfFailedLoginAttempts(int noOfFailedLoginAttempts) {
+        this.noOfFailedLoginAttempts = noOfFailedLoginAttempts;
+    }
+
     @Override
     public String toString() {
         return "AppUser [username=" + this.username + ", getId()=" + this.getId() + "]";

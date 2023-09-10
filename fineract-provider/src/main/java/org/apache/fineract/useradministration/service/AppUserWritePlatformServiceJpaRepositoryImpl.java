@@ -308,7 +308,6 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
         return new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue", "Unknown data integrity issue with resource.");
     }
 
-
     @Override
     public AppUser saveUser(AppUser appUser) {
         return appUserRepository.saveAndFlush(appUser);
