@@ -123,9 +123,6 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
     @Column(name = "temporary_password_expiry_time", nullable = true)
     private LocalDateTime temporaryPasswordExpiryTime;
 
-    @Column(name = "temporary_password", nullable = true)
-    private String temporaryPassword;
-
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
 
@@ -736,12 +733,14 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
         return "AppUser [username=" + this.username + ", getId()=" + this.getId() + "]";
     }
 
-    public LocalDateTime getTemporaryPasswordExpiryTime() {
-        return temporaryPasswordExpiryTime;
+    public void updateTemporaryPasswordExpiryTime(final LocalDateTime temporaryPasswordExpiryTime) {
+        this.temporaryPasswordExpiryTime = temporaryPasswordExpiryTime;
+        this.lastTimePasswordUpdated = LocalDate.now();
+        this.passwordNeverExpires = false;
     }
 
-    public String getTemporaryPassword() {
-        return temporaryPassword;
+    public void updateTemporaryPassword(final String temporaryPassword) {
+        this.password = temporaryPassword;
     }
 
 }
