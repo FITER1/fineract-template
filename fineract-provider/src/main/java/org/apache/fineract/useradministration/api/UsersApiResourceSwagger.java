@@ -162,6 +162,17 @@ final class UsersApiResourceSwagger {
         public String repeatPassword;
     }
 
+    @Schema(description = "PostBlockUsersUserIdRequest")
+    public static final class PostBlockUsersUserIdRequest {
+
+        private PostBlockUsersUserIdRequest() {
+
+        }
+
+        @Schema(example = "2")
+        public Integer blockDays;
+    }
+
     @Schema(description = "PutUsersUserIdResponse")
     public static final class PutUsersUserIdResponse {
 
@@ -207,6 +218,27 @@ final class UsersApiResourceSwagger {
         @Schema(example = "11")
         public Long resourceId;
         public DeleteUsersUserIdResponseChanges changes;
+    }
+
+    @Schema(description = "BlockorUnblockUsersUserIdResponse")
+    public static final class BlockorUnblockUsersUserIdResponse {
+
+        private BlockorUnblockUsersUserIdResponse() {
+
+        }
+
+        static final class BlockorUnblockUserIdResponseChanges {
+
+            private BlockorUnblockUserIdResponseChanges() {
+
+            }
+        }
+
+        @Schema(example = "1")
+        public Long officeId;
+        @Schema(example = "11")
+        public Long resourceId;
+        public BlockorUnblockUsersUserIdResponse changes;
     }
 
 }

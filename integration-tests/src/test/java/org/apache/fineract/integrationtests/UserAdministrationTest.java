@@ -171,4 +171,20 @@ public class UserAdministrationTest {
 
         final List errors = (List) UserHelper.updateUser(this.requestSpec, expectStatusCode(403), userId, "systemtest", "errors");
     }
+
+    @Test
+    public void testBlockUnblockNewUser() {
+
+        final Integer roleId = RolesHelper.createRole(this.requestSpec, this.responseSpec);
+        Assertions.assertNotNull(roleId);
+
+        final Integer staffId = StaffHelper.createStaff(this.requestSpec, this.responseSpec);
+        Assertions.assertNotNull(staffId);
+
+        final Integer userId = UserHelper.createUser(this.requestSpec, this.responseSpec, roleId, staffId);
+        Assertions.assertNotNull(userId);
+
+        final Integer userId2 = (Integer) UserHelper.blockUser(this.requestSpec, this.responseSpec, userId, 5, "resourceId");
+        Assertions.assertNotNull(userId2);
+    }
 }
