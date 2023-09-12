@@ -147,4 +147,5 @@
     <include file="parts/0125_add_columns_to_appuser_table.xml" relativeToChangelogFile="true" />
     <include file="parts/0126_add_permissions_block_and_unblock_user.xml" relativeToChangelogFile="true" />
     <include file="parts/0127_account_lock_configuration.xml" relativeToChangelogFile="true" />
+    <include file="parts/0128_enhance_security.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>
