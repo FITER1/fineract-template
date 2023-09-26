@@ -55,6 +55,7 @@ import org.apache.fineract.infrastructure.bulkimport.service.BulkImportWorkbookS
 import org.apache.fineract.infrastructure.core.api.ApiRequestParameterHelper;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.UploadRequest;
+import org.apache.fineract.infrastructure.core.exception.UnrecognizedQueryParamException;
 import org.apache.fineract.infrastructure.core.serialization.ApiRequestJsonSerializationSettings;
 import org.apache.fineract.infrastructure.core.serialization.DefaultToApiJsonSerializer;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
@@ -227,5 +228,31 @@ public class UsersApiResource {
         final Long importDocumentId = this.bulkImportWorkbookService.importWorkbook(GlobalEntityType.USERS.toString(), uploadedInputStream,
                 fileDetail, locale, dateFormat);
         return this.toApiJsonSerializer.serialize(importDocumentId);
+    }
+
+    @POST
+    @Path("/{userId}")
+    @Operation(summary = "Block or Unblock a User", description = "When blocking a user you must provide the blockDays parameter also.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = UsersApiResourceSwagger.PostBlockUsersUserIdRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = UsersApiResourceSwagger.BlockorUnblockUsersUserIdResponse.class))) })
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    public String blockOrUnblockUser(@PathParam("userId") @Parameter(description = "userId") final Long userId,
+            @QueryParam("command") final String command, @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+        final CommandWrapperBuilder builder = new CommandWrapperBuilder().withJson(apiRequestBodyAsJson);
+        CommandProcessingResult result;
+
+        if (command != null && command.equalsIgnoreCase("block")) {
+            final CommandWrapper commandRequest = builder.blockUser(userId).build();
+            result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+            return this.toApiJsonSerializer.serialize(result);
+        } else if (command != null && command.equalsIgnoreCase("unblock")) {
+            final CommandWrapper commandRequest = builder.unblockUser(userId).build();
+            result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
+            return this.toApiJsonSerializer.serialize(result);
+        } else {
+            throw new UnrecognizedQueryParamException("command", command);
+        }
     }
 }
