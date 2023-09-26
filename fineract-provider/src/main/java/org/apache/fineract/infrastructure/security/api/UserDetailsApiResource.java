@@ -111,7 +111,7 @@ public class UserDetailsApiResource {
 
         boolean isTwoFactorRequired = this.twoFactorEnabled
                 && !principal.hasSpecificPermissionTo(TwoFactorConstants.BYPASS_TWO_FACTOR_PERMISSION);
-        if (this.springSecurityPlatformSecurityContext.doesPasswordHasToBeRenewed(principal)) {
+        if (this.springSecurityPlatformSecurityContext.doesPasswordHaveToBeRenewed(principal)) {
             authenticatedUserData = new AuthenticatedOauthUserData().setUsername(principal.getUsername()).setUserId(principal.getId())
                     .setAccessToken(authentication.getToken().getTokenValue()).setAuthenticated(true).setShouldRenewPassword(true)
                     .setTwoFactorAuthenticationRequired(isTwoFactorRequired);
