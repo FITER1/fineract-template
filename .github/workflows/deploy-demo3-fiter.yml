@@ -47,7 +47,7 @@ jobs:
         run: |
           HOST=${{ secrets.FITER_DEMO_SERVER_URL }}
           USER=ubuntu
-          SOURCE_FILE=./fineract-provider/build/libs/fineract-provider-0.0.0-${{ steps.shortened_sha.outputs.shortened_sha }}.jar
+          SOURCE_FILE=./fineract-provider/build/libs/fineract-provider.jar
           DESTINATION_DIR=/home/ubuntu/fineract/
           echo "${{ secrets.FITER_DEMO_SERVER_SSH_KEY }}" > key.pem
           chmod 400 key.pem
