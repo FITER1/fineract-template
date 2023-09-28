@@ -129,9 +129,6 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
     @Column(name = "can_login_after", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime canLoginAfter;
 
-    @Column(name = "temporary_password_expiry_time", nullable = true)
-    private LocalDateTime temporaryPasswordExpiryTime;
-
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
 
