@@ -148,4 +148,8 @@
     <include file="parts/0127_force_reset_password_on_first_logon_config.xml" relativeToChangelogFile="true" />
     <include file="parts/0128_enhance_security.xml" relativeToChangelogFile="true" />
     <include file="parts/0129_add_forgot_password.xml" relativeToChangelogFile="true" />
+    <include file="parts/0130_add_columns_to_appuser_table.xml" relativeToChangelogFile="true" />
+    <include file="parts/0131_add_permissions_block_and_unblock_user.xml" relativeToChangelogFile="true" />
+    <include file="parts/0132_account_lock_configuration.xml" relativeToChangelogFile="true" />
+
 </databaseChangeLog>

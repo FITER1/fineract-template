@@ -54,12 +54,15 @@ public final class UserDataValidator {
     public static final String SEND_PASSWORD_TO_EMAIL = "sendPasswordToEmail";
     public static final String STAFF_ID = "staffId";
     public static final String PASSWORD_NEVER_EXPIRES = "passwordNeverExpires";
+    public static final String BLOCK_DAYS = "blockDays";
+    private static final String LOCALE = "locale";
+
     /**
      * The parameters supported for this command.
      */
     private static final Set<String> SUPPORTED_PARAMETERS = new HashSet<>(Arrays.asList(USERNAME, FIRSTNAME, LASTNAME, PASSWORD,
             REPEAT_PASSWORD, EMAIL, OFFICE_ID, NOT_SELECTED_ROLES, ROLES, SEND_PASSWORD_TO_EMAIL, STAFF_ID, PASSWORD_NEVER_EXPIRES,
-            AppUserConstants.IS_SELF_SERVICE_USER, AppUserConstants.CLIENTS));
+            AppUserConstants.IS_SELF_SERVICE_USER, AppUserConstants.CLIENTS, BLOCK_DAYS, LOCALE));
     public static final String PASSWORD_NEVER_EXPIRE = "passwordNeverExpire";
 
     private final FromJsonHelper fromApiJsonHelper;
@@ -257,6 +260,27 @@ public final class UserDataValidator {
                 }
             }
         }
+
+        throwExceptionIfValidationWarningsExist(dataValidationErrors);
+    }
+
+    public void validateForBlock(final String json) {
+        if (StringUtils.isBlank(json)) {
+            throw new InvalidJsonException();
+        }
+
+        final Type typeOfMap = new TypeToken<Map<String, Object>>() {
+
+        }.getType();
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, SUPPORTED_PARAMETERS);
+
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("user");
+
+        final JsonElement element = this.fromApiJsonHelper.parse(json);
+
+        final Integer blockDays = this.fromApiJsonHelper.extractIntegerWithLocaleNamed(BLOCK_DAYS, element);
+        baseDataValidator.reset().parameter(BLOCK_DAYS).value(blockDays).notNull().integerGreaterThanZero();
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
     }
