@@ -129,6 +129,9 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
     @Column(name = "can_login_after", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime canLoginAfter;
 
+    @Column(name = "temporary_password_expiry_time", nullable = true)
+    private LocalDateTime temporaryPasswordExpiryTime;
+
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
 
@@ -738,10 +741,6 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
         return newAppUserClientMappings;
     }
 
-    public boolean isFirstTimeLoginRemaining() {
-        return this.firstTimeLoginRemaining;
-    }
-
     public int getNoOfFailedLoginAttempts() {
         return noOfFailedLoginAttempts;
     }
@@ -768,6 +767,10 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
 
     public void setNoOfFailedLoginAttempts(int noOfFailedLoginAttempts) {
         this.noOfFailedLoginAttempts = noOfFailedLoginAttempts;
+    }
+
+    public boolean isFirstTimeLoginRemaining() {
+        return this.firstTimeLoginRemaining;
     }
 
     @Override

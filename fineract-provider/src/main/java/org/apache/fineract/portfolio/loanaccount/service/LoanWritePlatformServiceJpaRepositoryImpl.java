@@ -77,6 +77,7 @@ import org.apache.fineract.infrastructure.event.business.domain.loan.LoanUndoDis
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanUndoLastDisbursalBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanUpdateDisbursementDataBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanWithdrawTransferBusinessEvent;
+import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanAccrualTransactionCreatedBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanChargeOffPostBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanChargeOffPreBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.transaction.LoanDisbursalTransactionBusinessEvent;
@@ -436,7 +437,6 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 disbursementTransaction.updateLoan(loan);
                 loan.addLoanTransaction(disbursementTransaction);
             }
-
             if (loan.getRepaymentScheduleInstallments().isEmpty()) {
                 /*
                  * If no schedule, generate one (applicable to non-tranche multi-disbursal loans)
@@ -445,16 +445,18 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             }
             regenerateScheduleOnDisbursement(command, loan, recalculateSchedule, scheduleGeneratorDTO, nextPossibleRepaymentDate,
                     rescheduledRepaymentDate);
-            if (loan.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
+            boolean downPaymentEnabled = loan.repaymentScheduleDetail().isEnableDownPayment();
+            if (loan.repaymentScheduleDetail().isInterestRecalculationEnabled() || downPaymentEnabled) {
                 createAndSaveLoanScheduleArchive(loan, scheduleGeneratorDTO);
             }
             if (isPaymentTypeApplicableForDisbursementCharge) {
-                changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, paymentDetail);
+                changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, paymentDetail,
+                        downPaymentEnabled);
             } else {
-                changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, null);
+                changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, null, downPaymentEnabled);
             }
-
             loan.adjustNetDisbursalAmount(amountToDisburse.getAmount());
+            loan.handleDownPayment(amountToDisburse.getAmount(), command, scheduleGeneratorDTO);
         }
         if (!changes.isEmpty()) {
             if (changedTransactionDetail != null) {
@@ -487,14 +489,10 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 disBuLoanCharges.put(loanCharge.getId(), loanCharge.amountOutstanding());
             }
             if (loanCharge.isDisbursementCharge()) {
-                String transactionSql = "INSERT INTO m_loan_transaction  (loan_id,office_id,is_reversed,external_id,transaction_type_enum,transaction_date,amount,"
-                        + "fee_charges_portion_derived, submitted_on_date, created_by, last_modified_by, created_on_utc, last_modified_on_utc) "
-                        + "VALUES (?, ?, false, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                AppUser user = context.authenticatedUser();
-                jdbcTemplate.update(transactionSql, loanId, loan.getOfficeId(), externalIdFactory.create().getValue(),
-                        LoanTransactionType.ACCRUAL.getValue(), actualDisbursementDate, loanCharge.amount(), loanCharge.amount(),
-                        DateUtils.getBusinessLocalDate(), user.getId(), user.getId(),
-                        DateUtils.getOffsetDateTimeOfTenantWithMostPrecision(), DateUtils.getOffsetDateTimeOfTenantWithMostPrecision());
+                LoanTransaction loanTransaction = LoanTransaction.accrueTransaction(loan, loan.getOffice(), actualDisbursementDate,
+                        loanCharge.amount(), null, loanCharge.amount(), null, externalIdFactory.create());
+                LoanTransaction savedLoanTransaction = loanTransactionRepository.saveAndFlush(loanTransaction);
+                businessEventNotifierService.notifyPostBusinessEvent(new LoanAccrualTransactionCreatedBusinessEvent(savedLoanTransaction));
             }
         }
 
@@ -734,13 +732,15 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 final ScheduleGeneratorDTO scheduleGeneratorDTO = this.loanUtilService.buildScheduleGeneratorDTO(loan, recalculateFrom);
                 regenerateScheduleOnDisbursement(command, loan, recalculateSchedule, scheduleGeneratorDTO, nextPossibleRepaymentDate,
                         rescheduledRepaymentDate);
-                if (loan.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
+                boolean downPaymentEnabled = loan.repaymentScheduleDetail().isEnableDownPayment();
+                if (loan.repaymentScheduleDetail().isInterestRecalculationEnabled() || downPaymentEnabled) {
                     createAndSaveLoanScheduleArchive(loan, scheduleGeneratorDTO);
                 }
                 if (configurationDomainService.isPaymentTypeApplicableForDisbursementCharge()) {
-                    changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, paymentDetail);
+                    changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, paymentDetail,
+                            downPaymentEnabled);
                 } else {
-                    changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, null);
+                    changedTransactionDetail = loan.disburse(currentUser, command, changes, scheduleGeneratorDTO, null, downPaymentEnabled);
                 }
             }
             if (!changes.isEmpty()) {
@@ -869,16 +869,6 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             final Map<String, Object> accountingBridgeData = loan.deriveAccountingBridgeData(currency.getCode(), existingTransactionIds,
                     existingReversedTransactionIds, isAccountTransfer);
             journalEntryWritePlatformService.createJournalEntriesForLoan(accountingBridgeData);
-
-            // Remove All the Disbursement Details If the Loan Product is disabled and exists one
-            if (loan.loanProduct().isDisallowExpectedDisbursements() && !loan.getDisbursementDetails().isEmpty()) {
-                List<LoanDisbursementDetails> reversedDisbursementDetails = new ArrayList<>();
-                for (LoanDisbursementDetails disbursementDetail : loan.getAllDisbursementDetails()) {
-                    disbursementDetail.reverse();
-                    reversedDisbursementDetails.add(disbursementDetail);
-                }
-                this.loanDisbursementDetailsRepository.saveAllAndFlush(reversedDisbursementDetails);
-            }
             loanAccrualTransactionBusinessEventService.raiseBusinessEventForAccrualTransactions(loan, existingTransactionIds);
             businessEventNotifierService.notifyPostBusinessEvent(new LoanUndoDisbursalBusinessEvent(loan));
         }
@@ -2471,7 +2461,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
     private List<LoanRepaymentScheduleInstallment> retrieveRepaymentScheduleFromModel(LoanScheduleModel model) {
         final List<LoanRepaymentScheduleInstallment> installments = new ArrayList<>();
         for (final LoanScheduleModelPeriod scheduledLoanInstallment : model.getPeriods()) {
-            if (scheduledLoanInstallment.isRepaymentPeriod()) {
+            if (scheduledLoanInstallment.isRepaymentPeriod() || scheduledLoanInstallment.isDownPaymentPeriod()) {
                 final LoanRepaymentScheduleInstallment installment = new LoanRepaymentScheduleInstallment(null,
                         scheduledLoanInstallment.periodNumber(), scheduledLoanInstallment.periodFromDate(),
                         scheduledLoanInstallment.periodDueDate(), scheduledLoanInstallment.principalDue(),

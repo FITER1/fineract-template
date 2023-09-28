@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.integrationtests;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -65,6 +66,8 @@ import org.apache.fineract.integrationtests.common.system.DatatableHelper;
 import org.apache.fineract.integrationtests.useradministration.users.UserHelper;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
 import org.apache.http.HttpStatus;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -117,6 +120,11 @@ public class BatchApiTest {
         this.responseSpec = new ResponseSpecBuilder().expectStatusCode(200).build();
         this.datatableHelper = new DatatableHelper(this.requestSpec, this.responseSpec);
         GlobalConfigurationHelper.updateIsAutomaticExternalIdGenerationEnabled(this.requestSpec, this.responseSpec, true);
+    }
+
+    @AfterEach
+    public void postActions() {
+        GlobalConfigurationHelper.updateIsAutomaticExternalIdGenerationEnabled(this.requestSpec, this.responseSpec, false);
     }
 
     /**
@@ -1403,8 +1411,8 @@ public class BatchApiTest {
         columnMap.put("apptableName", LOAN_APP_TABLE_NAME);
         columnMap.put("entitySubType", "PERSON");
         columnMap.put("multiRow", true);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, columnName1, "String", true, 10, null);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, columnName2, "String", false, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName1, "String", true, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName2, "String", false, 10, null);
         columnMap.put("columns", datatableColumnsList);
         final String datatableRequestJsonString = new Gson().toJson(columnMap);
         LOG.info("CreateDataTable map : {}", datatableRequestJsonString);
@@ -2061,8 +2069,8 @@ public class BatchApiTest {
         columnMap.put("apptableName", LOAN_APP_TABLE_NAME);
         columnMap.put("entitySubType", "PERSON");
         columnMap.put("multiRow", false);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, columnName1, "String", true, 10, null);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, columnName2, "String", false, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName1, "String", true, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName2, "String", false, 10, null);
         columnMap.put("columns", datatableColumnsList);
         final String datatableRequestJsonString = new Gson().toJson(columnMap);
         LOG.info("CreateDataTable map : {}", datatableRequestJsonString);
@@ -2110,6 +2118,58 @@ public class BatchApiTest {
     }
 
     /**
+     * Test when datatable entry was not found by the query API, and the update fails
+     */
+    @Test
+    public void shouldNotFindAnyDatatableEntryByQueryAPIAndFailsToUpdateItsColumn() {
+        final String datatableName = Utils.uniqueRandomStringGenerator(LOAN_APP_TABLE_NAME + "_", 5).toLowerCase();
+
+        // creating datatable with m_loan association
+        final Map<String, Object> columnMap = new HashMap<>();
+        final List<HashMap<String, Object>> datatableColumnsList = new ArrayList<>();
+
+        final String columnName1 = Utils.randomStringGenerator("COL1_", 5).toLowerCase();
+        final String columnName2 = Utils.randomStringGenerator("COL2_", 5).toLowerCase();
+        columnMap.put("datatableName", datatableName);
+        columnMap.put("apptableName", LOAN_APP_TABLE_NAME);
+        columnMap.put("entitySubType", "PERSON");
+        columnMap.put("multiRow", false);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName1, "String", true, 15, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName2, "String", false, 15, null);
+        columnMap.put("columns", datatableColumnsList);
+        final String datatableRequestJsonString = new Gson().toJson(columnMap);
+        LOG.info("CreateDataTable map : {}", datatableRequestJsonString);
+
+        this.datatableHelper.createDatatable(datatableRequestJsonString, "");
+
+        final BatchRequest queryDatatableEntriesRequest = BatchHelper.queryDatatableEntries(datatableName, columnName1, "columnValue1",
+                "loan_id");
+        final BatchRequest updateDatatableEntry = BatchHelper.updateDatatableEntry(datatableName, "$.[0].loan_id", columnName2,
+                "columnValue2");
+
+        final List<BatchRequest> batchRequestsToQueryAndUpdateDatatableEntries = Arrays.asList(queryDatatableEntriesRequest,
+                updateDatatableEntry);
+        LOG.info("Batch Request : {}", BatchHelper.toJsonString(batchRequestsToQueryAndUpdateDatatableEntries));
+
+        final List<BatchResponse> responseOfQueryAndUpdateDatatableBatch = BatchHelper.postBatchRequestsWithEnclosingTransaction(
+                this.requestSpec, this.responseSpec, BatchHelper.toJsonString(batchRequestsToQueryAndUpdateDatatableEntries));
+
+        LOG.info("Batch Response : {}", new Gson().toJson(responseOfQueryAndUpdateDatatableBatch));
+
+        final BatchResponse queryResponse = responseOfQueryAndUpdateDatatableBatch.get(0);
+
+        Assertions.assertEquals(1L, queryResponse.getRequestId());
+        Assertions.assertEquals(HttpStatus.SC_OK, queryResponse.getStatusCode(), "Verify Status Code 200 for query datatable entry");
+
+        final BatchResponse updateResponse = responseOfQueryAndUpdateDatatableBatch.get(1);
+
+        Assertions.assertEquals(2L, updateResponse.getRequestId());
+        Assertions.assertEquals(HttpStatus.SC_BAD_REQUEST, updateResponse.getStatusCode(),
+                "Verify Status Code 400 for update datatable entry");
+        MatcherAssert.assertThat(updateResponse.getBody(), containsString("No results for path"));
+    }
+
+    /**
      * Test for finding datatable entry by the query API and update its value
      */
     @Test
@@ -2128,8 +2188,8 @@ public class BatchApiTest {
         columnMap.put("apptableName", LOAN_APP_TABLE_NAME);
         columnMap.put("entitySubType", "PERSON");
         columnMap.put("multiRow", true);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, columnName1, "String", true, 10, null);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, columnName2, "String", false, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName1, "String", true, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, columnName2, "String", false, 10, null);
         columnMap.put("columns", datatableColumnsList);
         final String datatableRequestJsonString = new Gson().toJson(columnMap);
         LOG.info("CreateDataTable map : {}", datatableRequestJsonString);
