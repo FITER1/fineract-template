@@ -94,5 +94,6 @@
     <include file="parts/INKO_76_update_client_id_select_all_report_parameter_query.xml" relativeToChangelogFile="true" />
     <include file="parts/INKO_75_update_loan_aging_summary_reports.xml" relativeToChangelogFile="true" />
     <include file="parts/INKO_77_add_loan_fully_paid_table_report.xml" relativeToChangelogFile="true" />
+    <include file="parts/INKO_78_add_secured_and_non_secured_table_report.xml" relativeToChangelogFile="true" />
     <includeAll path="custom-changelog" relativeToChangelogFile="true"/>
 </databaseChangeLog>
