@@ -23,6 +23,6 @@ import org.apache.fineract.infrastructure.core.exception.AbstractPlatformDomainR
 public class UserLockedOutException extends AbstractPlatformDomainRuleException {
 
     public UserLockedOutException() {
-        super("error.msg.user.locked.out", "Account locked out. Please try again after some time.");
+        super("error.msg.user.locked.out", "Account has been blocked. Please contact admin for assistance.");
     }
 }
