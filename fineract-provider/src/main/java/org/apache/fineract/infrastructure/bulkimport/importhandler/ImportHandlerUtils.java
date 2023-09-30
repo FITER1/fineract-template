@@ -279,7 +279,14 @@ public final class ImportHandlerUtils {
     }
 
     public static String getErrorMessage(RuntimeException re) {
-        if (re instanceof AbstractPlatformException) {
+        if (re instanceof PlatformApiDataValidationException) {
+            StringBuilder errorMessage = new StringBuilder();
+            PlatformApiDataValidationException platformApiDataValidationException = (PlatformApiDataValidationException) re;
+            platformApiDataValidationException.getErrors().forEach(error -> {
+                errorMessage.append(error.getDefaultUserMessage()).append(" ");
+            });
+            return errorMessage.toString();
+        }else if (re instanceof AbstractPlatformException) {
             AbstractPlatformException abstractPlatformException = (AbstractPlatformException) re;
             return abstractPlatformException.getDefaultUserMessage();
         } else if (re instanceof UnsupportedParameterException) {

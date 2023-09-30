@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import lombok.Getter;
 import org.apache.fineract.infrastructure.core.domain.LocalDateInterval;
@@ -71,7 +72,7 @@ public final class SavingsAccountTransactionData implements Serializable {
     private final boolean interestedPostedAsOn;
     private final String submittedByUsername;
     private final String note;
-    private final boolean isManualTransaction;
+    private final Boolean isManualTransaction;
     private final Boolean isReversal;
     private final Long originalTransactionId;
     private final Boolean lienTransaction;
@@ -265,6 +266,8 @@ public final class SavingsAccountTransactionData implements Serializable {
         data.bankNumber = bankNumber;
         data.locale = locale;
         data.dateFormat = dateFormat;
+        this.isManualTransaction = null;
+        this.lienTransaction = null;
         return data;
     }
 
@@ -647,11 +650,11 @@ public final class SavingsAccountTransactionData implements Serializable {
     }
 
     public boolean isManualTransaction() {
-        return isManualTransaction;
+        return Optional.ofNullable(isManualTransaction).orElse(false);
     }
 
     public boolean isIsManualTransaction() {
-        return isManualTransaction;
+        return Optional.ofNullable(isManualTransaction).orElse(false);
     }
 
     public TransactionEntryType getEntryType() {
