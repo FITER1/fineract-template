@@ -69,6 +69,18 @@ public class ApiGlobalErrorResponse {
         return globalErrorResponse;
     }
 
+    public static ApiGlobalErrorResponse userLockedOut() {
+
+        final ApiGlobalErrorResponse globalErrorResponse = new ApiGlobalErrorResponse();
+        globalErrorResponse.setHttpStatusCode("403");
+        globalErrorResponse
+                .setDeveloperMessage("Account locked out due to too many failed login attempts. Please try again after some time.");
+        globalErrorResponse.setUserMessageGlobalisationCode("error.msg.user.locked.out");
+        globalErrorResponse.setDefaultUserMessage("Account locked out. Please try again after some time.");
+
+        return globalErrorResponse;
+    }
+
     public static ApiGlobalErrorResponse invalidTenantIdentifier() {
 
         final ApiGlobalErrorResponse globalErrorResponse = new ApiGlobalErrorResponse();

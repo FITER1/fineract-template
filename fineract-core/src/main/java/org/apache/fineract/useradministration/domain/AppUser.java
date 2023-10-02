@@ -30,6 +30,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -119,6 +120,15 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
     @Column(name = "cannot_change_password", nullable = true)
     private Boolean cannotChangePassword;
 
+    @Column(name = "temporary_password_expiry_time", nullable = true)
+    private LocalDateTime temporaryPasswordExpiryTime;
+
+    @Column(name = "no_of_failed_login_attempts", nullable = false)
+    private int noOfFailedLoginAttempts;
+
+    @Column(name = "can_login_after", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
+    private LocalDateTime canLoginAfter;
+
     public static AppUser fromJson(final Office userOffice, final Staff linkedStaff, final Set<Role> allRoles,
             final Collection<Client> clients, final JsonCommand command) {
 
@@ -195,13 +205,17 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
         return organisationalRole;
     }
 
-    public void updatePassword(final String encodePassword) {
+    public void updatePassword(final String password) {
+        updatePassword(password, false);
+    }
+
+    public void updatePassword(final String encodePassword, boolean firstTimeLoginRemaining) {
         if (cannotChangePassword != null && cannotChangePassword == true) {
             throw new NoAuthorizationException("Password of this user may not be modified");
         }
 
         this.password = encodePassword;
-        this.firstTimeLoginRemaining = false;
+        this.firstTimeLoginRemaining = firstTimeLoginRemaining;
         this.lastTimePasswordUpdated = DateUtils.getBusinessLocalDate();
 
     }
@@ -724,8 +738,51 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
         return newAppUserClientMappings;
     }
 
+    public int getNoOfFailedLoginAttempts() {
+        return noOfFailedLoginAttempts;
+    }
+
+    public void incrementNoOfFailedLoginAttempts() {
+        this.noOfFailedLoginAttempts++;
+    }
+
+    public void resetNoOfFailedLoginAttempts() {
+        this.noOfFailedLoginAttempts = 0;
+    }
+
+    public boolean isLockedOut() {
+        return canLoginAfter.isAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()));
+    }
+
+    public void setCanLoginAfter(LocalDateTime canLoginAfter) {
+        this.canLoginAfter = canLoginAfter;
+    }
+
+    public LocalDateTime getCanLoginAfter() {
+        return this.canLoginAfter;
+    }
+
+    public void setNoOfFailedLoginAttempts(int noOfFailedLoginAttempts) {
+        this.noOfFailedLoginAttempts = noOfFailedLoginAttempts;
+    }
+
+    public boolean isFirstTimeLoginRemaining() {
+        return this.firstTimeLoginRemaining;
+    }
+
     @Override
     public String toString() {
         return "AppUser [username=" + this.username + ", getId()=" + this.getId() + "]";
     }
+
+    public void updateTemporaryPasswordExpiryTime(final LocalDateTime temporaryPasswordExpiryTime) {
+        this.temporaryPasswordExpiryTime = temporaryPasswordExpiryTime;
+        this.lastTimePasswordUpdated = LocalDate.now();
+        this.passwordNeverExpires = false;
+    }
+
+    public void updateTemporaryPassword(final String temporaryPassword) {
+        this.password = temporaryPassword;
+    }
+
 }
