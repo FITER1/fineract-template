@@ -683,11 +683,11 @@ public final class SavingsAccountTransactionData implements Serializable {
     }
 
     public boolean isManualTransaction() {
-        return isManualTransaction;
+        return Optional.ofNullable(isManualTransaction).orElse(false);
     }
 
     public boolean isIsManualTransaction() {
-        return isManualTransaction;
+        return Optional.ofNullable(isManualTransaction).orElse(false);
     }
 
     public TransactionEntryType getEntryType() {
