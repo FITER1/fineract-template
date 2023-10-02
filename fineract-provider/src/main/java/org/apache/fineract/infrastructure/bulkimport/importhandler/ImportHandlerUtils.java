@@ -280,7 +280,7 @@ public final class ImportHandlerUtils {
     }
 
     public static String getErrorMessage(RuntimeException re) {
-        if (re instanceof PlatformApiDataValidationException) {
+	    if (re instanceof PlatformApiDataValidationException) {
             StringBuilder errorMessage = new StringBuilder();
             PlatformApiDataValidationException platformApiDataValidationException = (PlatformApiDataValidationException) re;
             platformApiDataValidationException.getErrors().forEach(error -> {
