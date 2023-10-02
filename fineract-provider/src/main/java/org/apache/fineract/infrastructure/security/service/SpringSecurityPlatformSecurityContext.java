@@ -27,6 +27,7 @@ import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDoma
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.exception.NoAuthorizationException;
 import org.apache.fineract.infrastructure.security.exception.ResetPasswordException;
+import org.apache.fineract.infrastructure.security.exception.UserLockedOutException;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.exception.UnAuthenticatedUserException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,6 +69,10 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             throw new UnAuthenticatedUserException();
         }
 
+        if (this.isLockedOut(currentUser)) {
+            throw new UserLockedOutException();
+        }
+
         if (this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
@@ -96,6 +101,10 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             return null;
         }
 
+        if (this.isLockedOut(currentUser)) {
+            throw new UserLockedOutException();
+        }
+
         if (this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
@@ -117,6 +126,10 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
 
         if (currentUser == null) {
             throw new UnAuthenticatedUserException();
+        }
+
+        if (this.isLockedOut(currentUser)) {
+            throw new UserLockedOutException();
         }
 
         if (this.shouldCheckForPasswordForceReset(commandWrapper) && this.doesPasswordHaveToBeRenewed(currentUser)) {
@@ -173,6 +186,10 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             }
         }
         return true;
+    }
+
+    private boolean isLockedOut(AppUser currentUser) {
+        return currentUser.isLockedOut();
     }
 
 }
