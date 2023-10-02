@@ -78,7 +78,7 @@ public final class SavingsAccountTransactionData implements Serializable {
     private final Boolean lienTransaction;
     private final Long releaseTransactionId;
     private final String reasonForBlock;
-    private final Set<SavingsAccountChargesPaidByData> chargesPaidByData = new HashSet<>();
+    private Set<SavingsAccountChargesPaidByData> chargesPaidByData = new HashSet<>();
 
     // templates
     private final Collection<PaymentTypeData> paymentTypeOptions;
@@ -110,7 +110,7 @@ public final class SavingsAccountTransactionData implements Serializable {
             final CurrencyData currency, final BigDecimal amount, final BigDecimal outstandingChargeAmount, final BigDecimal runningBalance,
             final boolean reversed, final AccountTransferData transfer, final Collection<PaymentTypeData> paymentTypeOptions,
             final LocalDate submittedOnDate, final boolean interestedPostedAsOn, final String submittedByUsername, final String note,
-            final Boolean isReversal, final Long originalTransactionId, boolean isManualTransaction, final Boolean lienTransaction,
+            final Boolean isReversal, final Long originalTransactionId, Boolean isManualTransaction, final Boolean lienTransaction,
             final Long releaseTransactionId, final String reasonForBlock) {
         this.id = id;
         this.transactionType = transactionType;
@@ -234,7 +234,7 @@ public final class SavingsAccountTransactionData implements Serializable {
     private static SavingsAccountTransactionData createImport(final SavingsAccountTransactionEnumData transactionType,
             final PaymentDetailData paymentDetailData, final Long savingsAccountId, final String accountNumber,
             final LocalDate transactionDate, final BigDecimal transactionAmount, final boolean reversed, final LocalDate submittedOnDate,
-            boolean isManualTransaction, final Boolean lienTransaction) {
+            Boolean isManualTransaction, final Boolean lienTransaction) {
         SavingsAccountTransactionData data = new SavingsAccountTransactionData(null, transactionType, paymentDetailData, savingsAccountId,
                 accountNumber, transactionDate, null, transactionAmount, null, null, reversed, null, null, submittedOnDate, false, null,
                 null, null, null, isManualTransaction, lienTransaction, null, null);
@@ -256,23 +256,56 @@ public final class SavingsAccountTransactionData implements Serializable {
     public static SavingsAccountTransactionData importInstance(BigDecimal transactionAmount, LocalDate transactionDate, Long paymentTypeId,
             String accountNumber, String checkNumber, String routingCode, String receiptNumber, String bankNumber, Long savingsAccountId,
             SavingsAccountTransactionEnumData transactionType, Integer rowIndex, String locale, String dateFormat) {
-        SavingsAccountTransactionData data = createImport(transactionType, null, savingsAccountId, accountNumber, transactionDate,
-                transactionAmount, false, transactionDate, false, false);
-        data.rowIndex = rowIndex;
-        data.paymentTypeId = paymentTypeId;
-        data.checkNumber = checkNumber;
-        data.routingCode = routingCode;
-        data.receiptNumber = receiptNumber;
-        data.bankNumber = bankNumber;
-        data.locale = locale;
-        data.dateFormat = dateFormat;
+        return new SavingsAccountTransactionData(transactionAmount, transactionDate, paymentTypeId, accountNumber, checkNumber, routingCode,
+                receiptNumber, bankNumber, savingsAccountId, transactionType, rowIndex, locale, dateFormat, false);
+    }
+
+    private SavingsAccountTransactionData(BigDecimal transactionAmount, LocalDate transactionDate, Long paymentTypeId, String accountNumber,
+                                          String checkNumber, String routingCode, String receiptNumber, String bankNumber, Long savingsAccountId,
+                                          SavingsAccountTransactionEnumData transactionType, Integer rowIndex, String locale, String dateFormat,
+                                          final Boolean lienTransaction) {
+        this.id = null;
+        this.transactionType = transactionType;
+        this.accountId = null;
+        this.accountNo = null;
+        this.date = null;
+        this.currency = null;
+        this.paymentDetailData = null;
+        this.amount = null;
+        this.outstandingChargeAmount = null;
+        this.runningBalance = null;
+        this.reversed = false;
+        this.transfer = null;
+        this.submittedOnDate = null;
+        this.interestedPostedAsOn = false;
+        this.rowIndex = rowIndex;
+        this.savingsAccountId = savingsAccountId;
+        this.dateFormat = dateFormat;
+        this.locale = locale;
+        this.transactionDate = transactionDate;
+        this.transactionAmount = transactionAmount;
+        this.paymentTypeId = paymentTypeId;
+        this.accountNumber = accountNumber;
+        this.checkNumber = checkNumber;
+        this.routingCode = routingCode;
+        this.receiptNumber = receiptNumber;
+        this.bankNumber = bankNumber;
+        this.paymentTypeOptions = null;
+        this.submittedByUsername = null;
+        this.note = null;
         this.isManualTransaction = null;
+        this.isReversal = null;
+        this.originalTransactionId = null;
         this.lienTransaction = null;
-        return data;
+        this.releaseTransactionId = null;
+        this.reasonForBlock = null;
+        this.chargesPaidByData = null;
+        this.entryType = null;
+
     }
 
     private static SavingsAccountTransactionData createImport(SavingsAccountTransactionEnumData transactionType, Long savingsAccountId,
-            LocalDate transactionDate, BigDecimal transactionAmount, final LocalDate submittedOnDate, boolean isManualTransaction) {
+            LocalDate transactionDate, BigDecimal transactionAmount, final LocalDate submittedOnDate, Boolean isManualTransaction) {
         // import transaction
         return createImport(transactionType, null, savingsAccountId, null, transactionDate, transactionAmount, false, submittedOnDate,
                 isManualTransaction, false);
@@ -650,11 +683,11 @@ public final class SavingsAccountTransactionData implements Serializable {
     }
 
     public boolean isManualTransaction() {
-        return Optional.ofNullable(isManualTransaction).orElse(false);
+        return isManualTransaction;
     }
 
     public boolean isIsManualTransaction() {
-        return Optional.ofNullable(isManualTransaction).orElse(false);
+        return isManualTransaction;
     }
 
     public TransactionEntryType getEntryType() {
