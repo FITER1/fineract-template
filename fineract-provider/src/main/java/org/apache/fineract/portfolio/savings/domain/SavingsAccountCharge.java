@@ -754,7 +754,7 @@ public class SavingsAccountCharge extends AbstractPersistableCustom {
         SavingsAccountCharge that = (SavingsAccountCharge) o;
         return (penaltyCharge == that.penaltyCharge) && (paid == that.paid) && (waived == that.waived) && (status == that.status)
                 && Objects.equals(savingsAccount, that.savingsAccount) && Objects.equals(charge, that.charge)
-                && Objects.equals(chargeTime, that.chargeTime) && dueDate.compareTo(that.dueDate) == 0
+                && Objects.equals(chargeTime, that.chargeTime) && (dueDate != null && dueDate.compareTo(that.dueDate) == 0)
                         ? Boolean.TRUE
                         : Boolean.FALSE && Objects.equals(feeOnMonth, that.feeOnMonth) && Objects.equals(feeOnDay, that.feeOnDay)
                                 && Objects.equals(feeInterval, that.feeInterval)

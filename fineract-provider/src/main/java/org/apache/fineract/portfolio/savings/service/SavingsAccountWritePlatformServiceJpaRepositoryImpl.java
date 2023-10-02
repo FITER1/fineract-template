@@ -295,7 +295,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
 
         final SavingsAccount account = this.savingAccountAssembler.assembleFrom(savingsId, backdatedTxnsAllowedTill);
-
+        account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
         if (account.getGsim() != null) {
             isGsim = true;
             log.debug("is gsim");
@@ -375,7 +375,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
         final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
 
         final SavingsAccount account = this.savingAccountAssembler.assembleFrom(savingsId, backdatedTxnsAllowedTill);
-
+        account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
         if (account.getGsim() != null) {
             isGsim = true;
         }
@@ -487,6 +487,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
 
         final boolean backdatedTxnsAllowedTill = this.savingAccountAssembler.getPivotConfigStatus();
         final SavingsAccount account = this.savingAccountAssembler.assembleFrom(savingsId, backdatedTxnsAllowedTill);
+        account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
         checkClientOrGroupActive(account);
 
         this.savingsAccountTransactionDataValidator.validateTransactionWithPivotDate(transactionDate, account);
