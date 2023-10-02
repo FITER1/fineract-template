@@ -1277,12 +1277,6 @@ public class SavingsAccount extends AbstractPersistableCustom {
                 "savingsaccount");
         validateActivityNotBeforeClientOrGroupTransferDate(SavingsEvent.SAVINGS_WITHDRAWAL, transactionDTO.getTransactionDate());
 
-        if (applyWithdrawFee) {
-            // auto pay withdrawal fee
-            payWithdrawalFee(transactionDTO.getTransactionAmount(), transactionDTO.getTransactionDate(), transactionDTO.getAppUser(),
-                    transactionDTO.getPaymentDetail(), backdatedTxnsAllowedTill, refNo);
-        }
-
         final Money transactionAmountMoney = Money.of(this.currency, transactionDTO.getTransactionAmount());
         final SavingsAccountTransaction transaction = SavingsAccountTransaction.withdrawal(this, office(),
                 transactionDTO.getPaymentDetail(), transactionDTO.getTransactionDate(), transactionAmountMoney,
@@ -1294,6 +1288,12 @@ public class SavingsAccount extends AbstractPersistableCustom {
             addTransaction(transaction);
         }
 
+        if (applyWithdrawFee) {
+            // auto pay withdrawal fee
+            payWithdrawalFee(transactionDTO.getTransactionAmount(), transactionDTO.getTransactionDate(), transactionDTO.getAppUser(),
+                    transactionDTO.getPaymentDetail(), backdatedTxnsAllowedTill, refNo);
+        }
+        
         if (this.sub_status.equals(SavingsAccountSubStatusEnum.INACTIVE.getValue())
                 || this.sub_status.equals(SavingsAccountSubStatusEnum.DORMANT.getValue())) {
             this.sub_status = SavingsAccountSubStatusEnum.NONE.getValue();
