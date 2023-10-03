@@ -961,8 +961,8 @@ public class DatatableIntegrationTest extends IntegrationTest {
         columnMap.put("apptableName", CLIENT_APP_TABLE_NAME);
         columnMap.put("entitySubType", CLIENT_PERSON_SUBTYPE_NAME);
         columnMap.put("multiRow", false);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, "itsANumber", "Number", false, null, null);
-        DatatableHelper.addDatatableColumns(datatableColumnsList, "itsAString", "String", false, 10, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, "itsANumber", "Number", false, null, null);
+        DatatableHelper.addDatatableColumn(datatableColumnsList, "itsAString", "String", false, 10, null);
         columnMap.put("columns", datatableColumnsList);
         String datatabelRequestJsonString = new Gson().toJson(columnMap);
         LOG.info("map : {}", datatabelRequestJsonString);
