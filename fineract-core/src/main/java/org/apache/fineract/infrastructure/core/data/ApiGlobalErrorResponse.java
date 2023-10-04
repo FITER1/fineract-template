@@ -73,13 +73,13 @@ public class ApiGlobalErrorResponse {
 
         final ApiGlobalErrorResponse globalErrorResponse = new ApiGlobalErrorResponse();
         globalErrorResponse.setHttpStatusCode("403");
-        globalErrorResponse
-                .setDeveloperMessage("Account has been blocked. Please contact admin for assistance.");
+        globalErrorResponse.setDeveloperMessage("Account has been blocked. Please contact admin for assistance.");
         globalErrorResponse.setUserMessageGlobalisationCode("error.msg.user.locked.out");
         globalErrorResponse.setDefaultUserMessage("Account has been blocked. Please contact admin for assistance.");
 
         final List<ApiParameterError> errors = new ArrayList<>();
-        errors.add(ApiParameterError.generalError("error.msg.user.locked.out", "Account has been blocked. Please contact admin for assistance."));
+        errors.add(ApiParameterError.generalError("error.msg.user.locked.out",
+                "Account has been blocked. Please contact admin for assistance."));
         globalErrorResponse.setErrors(errors);
 
         return globalErrorResponse;

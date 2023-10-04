@@ -261,9 +261,9 @@ public final class SavingsAccountTransactionData implements Serializable {
     }
 
     private SavingsAccountTransactionData(BigDecimal transactionAmount, LocalDate transactionDate, Long paymentTypeId, String accountNumber,
-                                          String checkNumber, String routingCode, String receiptNumber, String bankNumber, Long savingsAccountId,
-                                          SavingsAccountTransactionEnumData transactionType, Integer rowIndex, String locale, String dateFormat,
-                                          final Boolean lienTransaction) {
+            String checkNumber, String routingCode, String receiptNumber, String bankNumber, Long savingsAccountId,
+            SavingsAccountTransactionEnumData transactionType, Integer rowIndex, String locale, String dateFormat,
+            final Boolean lienTransaction) {
         this.id = null;
         this.transactionType = transactionType;
         this.accountId = null;
