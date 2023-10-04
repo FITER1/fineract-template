@@ -160,7 +160,9 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
     @Override
     public boolean doesPasswordHaveToBeRenewed(AppUser currentUser) {
 
-        if (this.configurationDomainService.isPasswordForcedResetEnable() && !currentUser.getPasswordNeverExpires()) {
+        if (this.configurationDomainService.isPasswordForceResetOnFirstLogon() && currentUser.isFirstTimeLoginRemaining()) {
+            return true;
+        } else if (this.configurationDomainService.isPasswordForcedResetEnable() && !currentUser.getPasswordNeverExpires()) {
 
             Long passwordDurationDays = this.configurationDomainService.retrievePasswordLiveTime();
             final LocalDate passWordLastUpdateDate = currentUser.getLastTimePasswordUpdated();
@@ -170,8 +172,6 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             if (DateUtils.getLocalDateOfTenant().isAfter(passwordExpirationDate)) {
                 return true;
             }
-        } else if (this.configurationDomainService.isPasswordForceResetOnFirstLogon() && currentUser.isFirstTimeLoginRemaining()) {
-            return true;
         }
 
         return false;
