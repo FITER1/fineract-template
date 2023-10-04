@@ -1295,7 +1295,7 @@ public class SavingsAccount extends AbstractPersistableCustom {
             payWithdrawalFee(transactionDTO.getTransactionAmount(), transactionDTO.getTransactionDate(), transactionDTO.getAppUser(),
                     transactionDTO.getPaymentDetail(), backdatedTxnsAllowedTill, refNo);
         }
-        
+
         if (this.sub_status.equals(SavingsAccountSubStatusEnum.INACTIVE.getValue())
                 || this.sub_status.equals(SavingsAccountSubStatusEnum.DORMANT.getValue())) {
             this.sub_status = SavingsAccountSubStatusEnum.NONE.getValue();
