@@ -18,10 +18,15 @@
  */
 package org.apache.fineract.useradministration.service;
 
+import static org.apache.fineract.useradministration.service.UserDataValidator.BLOCK_DAYS;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import jakarta.persistence.PersistenceException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +35,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
+import org.apache.fineract.infrastructure.configuration.data.GlobalConfigurationPropertyData;
+import org.apache.fineract.infrastructure.configuration.service.ConfigurationReadPlatformService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
+import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.PlatformEmailSendException;
 import org.apache.fineract.infrastructure.security.service.PlatformPasswordEncoder;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
@@ -54,6 +62,7 @@ import org.apache.fineract.useradministration.domain.Role;
 import org.apache.fineract.useradministration.domain.RoleRepository;
 import org.apache.fineract.useradministration.domain.UserDomainService;
 import org.apache.fineract.useradministration.exception.PasswordPreviouslyUsedException;
+import org.apache.fineract.useradministration.exception.ProhibitPasswordReuseGlobalConfigurationException;
 import org.apache.fineract.useradministration.exception.RoleNotFoundException;
 import org.apache.fineract.useradministration.exception.UserNotFoundException;
 import org.springframework.cache.annotation.CacheEvict;
@@ -63,6 +72,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
@@ -80,6 +90,8 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
     private final AppUserPreviousPasswordRepository appUserPreviewPasswordRepository;
     private final StaffRepositoryWrapper staffRepositoryWrapper;
     private final ClientRepositoryWrapper clientRepositoryWrapper;
+    private final PasswordEncoder passwordEncoder;
+    private final ConfigurationReadPlatformService configurationReadPlatformService;
 
     @Override
     @Transactional
@@ -125,6 +137,7 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
             AppUser appUser = AppUser.fromJson(userOffice, linkedStaff, allRoles, clients, command);
 
             final Boolean sendPasswordToEmail = command.booleanObjectValueOfParameterNamed("sendPasswordToEmail");
+            appUser.setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()));
             this.userDomainService.create(appUser, sendPasswordToEmail);
 
             return new CommandProcessingResultBuilder() //
@@ -230,25 +243,43 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
      * Encode the new submitted password and retrieve the last N used passwords to check if the current submitted
      * password matches with one of them.
      */
-    private AppUserPreviousPassword getCurrentPasswordToSaveAsPreview(final AppUser user, final JsonCommand command) {
+    public AppUserPreviousPassword getCurrentPasswordToSaveAsPreview(final AppUser user, final JsonCommand command) {
         final String passWordEncodedValue = user.getEncodedPassword(command, this.platformPasswordEncoder);
+        String originalPassword = command.stringValueOfParameterNamed("password");
 
         AppUserPreviousPassword currentPasswordToSaveAsPreview = null;
+        Integer numberOfPreviousPasswords = 1000000;
+
+        GlobalConfigurationPropertyData restrictReuseOfPasswordConfig = configurationReadPlatformService
+                .retrieveGlobalConfiguration(AppUserApiConstant.RESTRICT_RE_USE_OF_PASSWORD);
+
+        if (!restrictReuseOfPasswordConfig.isEnabled()) {
+            throw new ProhibitPasswordReuseGlobalConfigurationException();
+        }
+        if (restrictReuseOfPasswordConfig.isEnabled() && restrictReuseOfPasswordConfig.getValue() > 0) {
+            numberOfPreviousPasswords = restrictReuseOfPasswordConfig.getValue().intValue();
+        }
 
         if (passWordEncodedValue != null) {
-            PageRequest pageRequest = PageRequest.of(0, AppUserApiConstant.numberOfPreviousPasswords, Sort.Direction.DESC, "removalDate");
+            PageRequest pageRequest = PageRequest.of(0, numberOfPreviousPasswords, Sort.Direction.DESC, "id");
             final List<AppUserPreviousPassword> nLastUsedPasswords = this.appUserPreviewPasswordRepository.findByUserId(user.getId(),
                     pageRequest);
+            // validate current password before saving it as preview
+            validatePasswordShouldNotBeReused(originalPassword, user.getPassword());
             for (AppUserPreviousPassword aPreviewPassword : nLastUsedPasswords) {
-                if (aPreviewPassword.getPassword().equals(passWordEncodedValue)) {
-                    throw new PasswordPreviouslyUsedException();
-                }
+                validatePasswordShouldNotBeReused(originalPassword, aPreviewPassword.getPassword());
             }
 
             currentPasswordToSaveAsPreview = new AppUserPreviousPassword(user);
         }
 
         return currentPasswordToSaveAsPreview;
+    }
+
+    private void validatePasswordShouldNotBeReused(String originalPassword, String aPreviewPassword) {
+        if (this.passwordEncoder.matches(originalPassword, aPreviewPassword)) {
+            throw new PasswordPreviouslyUsedException();
+        }
     }
 
     private Set<Role> assembleSetOfRoles(final String[] rolesArray) {
@@ -307,4 +338,67 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
         log.error("handleDataIntegrityIssues: Neither duplicate username nor existing user; unknown error occured", dve);
         return new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue", "Unknown data integrity issue with resource.");
     }
+
+    @Override
+    public AppUser saveUser(AppUser appUser) {
+        return appUserRepository.saveAndFlush(appUser);
+    }
+
+    @Override
+    @Transactional
+    public CommandProcessingResult blockUser(Long userId, JsonCommand command) {
+        try {
+            this.context.authenticatedUser(new CommandWrapperBuilder().blockUser(null).build());
+
+            this.fromApiJsonDeserializer.validateForBlock(command.json());
+
+            final AppUser user = this.appUserRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+
+            final Integer blockDays = command.integerValueOfParameterNamed(BLOCK_DAYS);
+            final Map<String, Object> changes = new HashMap<>();
+
+            if (blockDays != null && !user.isLockedOut()) {
+                Duration blockDaysDuration = Duration.ofDays(blockDays);
+                long minutes = blockDaysDuration.toMinutes();
+                user.setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()).plusMinutes(minutes));
+                changes.put(BLOCK_DAYS, blockDays);
+            }
+
+            if (!changes.isEmpty()) {
+                this.appUserRepository.saveAndFlush(user);
+            }
+
+            return new CommandProcessingResultBuilder().withEntityId(userId).withOfficeId(user.getOffice().getId()).build();
+        } catch (final DataIntegrityViolationException dve) {
+            throw handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+        } catch (final JpaSystemException | PersistenceException | AuthenticationServiceException dve) {
+            log.error("blockUser: JpaSystemException | PersistenceException | AuthenticationServiceException", dve);
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            throw handleDataIntegrityIssues(command, throwable, dve);
+        }
+    }
+
+    @Override
+    @Transactional
+    public CommandProcessingResult unblockUser(Long userId) {
+        try {
+            this.context.authenticatedUser(new CommandWrapperBuilder().unblockUser(null).build());
+
+            /**
+             * Checking the user present in DB or not using user id
+             */
+            final AppUser user = this.appUserRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+
+            if (user.isLockedOut()) {
+                user.setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()));
+                this.appUserRepository.saveAndFlush(user);
+            }
+
+            return new CommandProcessingResultBuilder().withEntityId(userId).withOfficeId(user.getOffice().getId()).build();
+        } catch (final JpaSystemException | DataIntegrityViolationException e) {
+            throw new PlatformDataIntegrityException("error.msg.unknown.data.integrity.issue",
+                    "Unknown data integrity issue with resource: " + e.getMostSpecificCause(), e);
+        }
+    }
+
 }

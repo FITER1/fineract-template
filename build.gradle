@@ -100,21 +100,25 @@ Run as:
 gradle clean bootRun'''
 
 version = "0.0.0-SNAPSHOT"
-gitVersioning.apply {
-    refs {
-        considerTagsOnBranches = true
+try {
+    gitVersioning.apply {
+        refs {
+            considerTagsOnBranches = true
 
-        tag("(?<version>.*)") {
-            version = "\${ref.version}"
+            tag("(?<version>.*)") {
+                version = "\${ref.version}"
+            }
+
+            branch(".+") {
+                version = "\${describe.tag.version.major}.\${describe.tag.version.minor}.\${describe.tag.version.patch.next}-SNAPSHOT"
+            }
         }
-
-        branch(".+") {
-            version = "\${describe.tag.version.major}.\${describe.tag.version.minor}.\${describe.tag.version.patch.next}-SNAPSHOT"
+        rev {
+            version = "\${commit}"
         }
     }
-    rev {
-        version = "\${commit}"
-    }
+}catch (Exception e){
+    println "Version exception, falling back to default version"
 }
 
 ext['groovy.version'] = '4.0.6'

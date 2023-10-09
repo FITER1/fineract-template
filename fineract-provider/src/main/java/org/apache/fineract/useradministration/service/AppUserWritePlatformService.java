@@ -20,6 +20,7 @@ package org.apache.fineract.useradministration.service;
 
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
+import org.apache.fineract.useradministration.domain.AppUser;
 
 public interface AppUserWritePlatformService {
 
@@ -28,4 +29,10 @@ public interface AppUserWritePlatformService {
     CommandProcessingResult updateUser(Long userId, JsonCommand command);
 
     CommandProcessingResult deleteUser(Long userId);
+
+    AppUser saveUser(AppUser appUser);
+
+    CommandProcessingResult blockUser(Long userId, JsonCommand command);
+
+    CommandProcessingResult unblockUser(Long userId);
 }

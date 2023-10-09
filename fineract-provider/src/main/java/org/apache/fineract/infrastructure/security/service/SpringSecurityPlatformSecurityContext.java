@@ -27,6 +27,7 @@ import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDoma
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.exception.NoAuthorizationException;
 import org.apache.fineract.infrastructure.security.exception.ResetPasswordException;
+import org.apache.fineract.infrastructure.security.exception.UserLockedOutException;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.exception.UnAuthenticatedUserException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,9 +42,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SpringSecurityPlatformSecurityContext implements PlatformSecurityContext {
-
-    // private static final Logger LOG =
-    // LoggerFactory.getLogger(SpringSecurityPlatformSecurityContext.class);
 
     private final ConfigurationDomainService configurationDomainService;
 
@@ -71,7 +69,11 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             throw new UnAuthenticatedUserException();
         }
 
-        if (this.doesPasswordHasToBeRenewed(currentUser)) {
+        if (this.isLockedOut(currentUser)) {
+            throw new UserLockedOutException();
+        }
+
+        if (this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
 
@@ -99,7 +101,11 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             return null;
         }
 
-        if (this.doesPasswordHasToBeRenewed(currentUser)) {
+        if (this.isLockedOut(currentUser)) {
+            throw new UserLockedOutException();
+        }
+
+        if (this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
 
@@ -122,7 +128,11 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             throw new UnAuthenticatedUserException();
         }
 
-        if (this.shouldCheckForPasswordForceReset(commandWrapper) && this.doesPasswordHasToBeRenewed(currentUser)) {
+        if (this.isLockedOut(currentUser)) {
+            throw new UserLockedOutException();
+        }
+
+        if (this.shouldCheckForPasswordForceReset(commandWrapper) && this.doesPasswordHaveToBeRenewed(currentUser)) {
             throw new ResetPasswordException(currentUser.getId());
         }
 
@@ -148,9 +158,11 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
     }
 
     @Override
-    public boolean doesPasswordHasToBeRenewed(AppUser currentUser) {
+    public boolean doesPasswordHaveToBeRenewed(AppUser currentUser) {
 
-        if (this.configurationDomainService.isPasswordForcedResetEnable() && !currentUser.getPasswordNeverExpires()) {
+        if (this.configurationDomainService.isPasswordForceResetOnFirstLogon() && currentUser.isFirstTimeLoginRemaining()) {
+            return true;
+        } else if (this.configurationDomainService.isPasswordForcedResetEnable() && !currentUser.getPasswordNeverExpires()) {
 
             Long passwordDurationDays = this.configurationDomainService.retrievePasswordLiveTime();
             final LocalDate passWordLastUpdateDate = currentUser.getLastTimePasswordUpdated();
@@ -161,6 +173,7 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
                 return true;
             }
         }
+
         return false;
 
     }
@@ -173,6 +186,10 @@ public class SpringSecurityPlatformSecurityContext implements PlatformSecurityCo
             }
         }
         return true;
+    }
+
+    private boolean isLockedOut(AppUser currentUser) {
+        return currentUser.isLockedOut();
     }
 
 }

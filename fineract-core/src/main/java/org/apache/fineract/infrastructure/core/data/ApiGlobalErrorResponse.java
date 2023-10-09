@@ -69,6 +69,22 @@ public class ApiGlobalErrorResponse {
         return globalErrorResponse;
     }
 
+    public static ApiGlobalErrorResponse userLockedOut() {
+
+        final ApiGlobalErrorResponse globalErrorResponse = new ApiGlobalErrorResponse();
+        globalErrorResponse.setHttpStatusCode("403");
+        globalErrorResponse.setDeveloperMessage("Account has been blocked. Please contact admin for assistance.");
+        globalErrorResponse.setUserMessageGlobalisationCode("error.msg.user.locked.out");
+        globalErrorResponse.setDefaultUserMessage("Account has been blocked. Please contact admin for assistance.");
+
+        final List<ApiParameterError> errors = new ArrayList<>();
+        errors.add(ApiParameterError.generalError("error.msg.user.locked.out",
+                "Account has been blocked. Please contact admin for assistance."));
+        globalErrorResponse.setErrors(errors);
+
+        return globalErrorResponse;
+    }
+
     public static ApiGlobalErrorResponse invalidTenantIdentifier() {
 
         final ApiGlobalErrorResponse globalErrorResponse = new ApiGlobalErrorResponse();

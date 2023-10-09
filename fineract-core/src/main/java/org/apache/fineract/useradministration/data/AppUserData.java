@@ -55,6 +55,7 @@ public final class AppUserData {
 
     @SuppressWarnings("unused")
     private Set<ClientData> clients;
+    private Boolean isLockedOut;
 
     public static AppUserData importInstance(Long officeId, Long staffId, String username, String firstname, String lastname, String email,
             Boolean sendPasswordToEmail, Boolean passwordNeverExpires, List<Long> roleIds, Integer rowIndex) {
@@ -83,6 +84,7 @@ public final class AppUserData {
         this.staff = null;
         this.isSelfServiceUser = null;
         this.clients = null;
+        this.isLockedOut = null;
     }
 
     public Integer getRowIndex() {
@@ -172,4 +174,7 @@ public final class AppUserData {
         return this.isSelfServiceUser == null ? false : this.isSelfServiceUser;
     }
 
+    public void setLockedOut(Boolean lockedOut) {
+        isLockedOut = lockedOut;
+    }
 }
