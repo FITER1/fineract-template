@@ -777,7 +777,7 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
 
     public void updateTemporaryPasswordExpiryTime(final LocalDateTime temporaryPasswordExpiryTime) {
         this.temporaryPasswordExpiryTime = temporaryPasswordExpiryTime;
-        this.lastTimePasswordUpdated = LocalDate.now();
+        this.lastTimePasswordUpdated = LocalDate.now(DateUtils.getDateTimeZoneOfTenant());
         this.passwordNeverExpires = false;
     }
 
