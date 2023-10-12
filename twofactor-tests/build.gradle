@@ -28,6 +28,20 @@ configurations {
 
 apply from: 'dependencies.gradle'
 
+dependencies {
+    modules {
+        module("org.apache.groovy:groovy") {
+            replacedBy("org.codehaus.groovy:groovy", "google-collections is now part of Guava")
+        }
+        module("org.apache.groovy:groovy-xml") {
+            replacedBy("org.codehaus.groovy:groovy-xml", "google-collections is now part of Guava")
+        }
+        module("org.apache.groovy:groovy-json") {
+            replacedBy("org.codehaus.groovy:groovy-json", "google-collections is now part of Guava")
+        }
+    }
+}
+
 // Allow external drivers to be used for the tests without packaging it
 // mainly due to license incompatibilities
 configurations {
