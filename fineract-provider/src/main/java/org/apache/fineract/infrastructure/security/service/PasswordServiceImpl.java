@@ -19,6 +19,8 @@
 package org.apache.fineract.infrastructure.security.service;
 
 import java.time.LocalDateTime;
+
+import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.PlatformEmailService;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.AppUserRepository;
@@ -56,7 +58,7 @@ public class PasswordServiceImpl implements PasswordService {
         final String encodePassword = this.passwordEncoder.encode(password);
         appUser.updateTemporaryPassword(encodePassword);
         // TODO allow number of hours from configuration
-        appUser.updateTemporaryPasswordExpiryTime(LocalDateTime.now().plusHours(24));
+        appUser.updateTemporaryPasswordExpiryTime(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()).plusHours(24));
         securityContext.setAuthentication(null);
         this.userRepository.saveAndFlush(appUser);
         this.emailService.sendToUserForgotPassword(appUser.getDisplayName(), appUser.getEmail(), appUser.getUsername(), password);
