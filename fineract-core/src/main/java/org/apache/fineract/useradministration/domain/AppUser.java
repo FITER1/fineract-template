@@ -168,7 +168,7 @@ public class AppUser extends AbstractPersistableCustom implements PlatformUser {
                 clients, cannotChangePassword);
     }
 
-    protected AppUser() {
+    public AppUser() {
         this.accountNonLocked = false;
         this.credentialsNonExpired = false;
         this.roles = new HashSet<>();

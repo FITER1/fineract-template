@@ -54,7 +54,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 
 @ExtendWith(MockitoExtension.class)
-class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
+class AuthenticationApiResourceTestMaxFailedAttemptsExceeded {
 
     @Mock
     private ConfigurationReadPlatformService configurationReadPlatformService;
@@ -82,8 +82,8 @@ class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
     @Test
     public void testAuthentication_Before_MaxFailedAttemptsExceeded() {
         // Arrange
-        final Long maxFailedLoginAttempts = 3l; // Set this value to your desired limit
-        final Long lockoutDuration = 30l; // Set this value to your desired duration
+        final Long maxFailedLoginAttempts = 3L; // Set this value to your desired limit
+        final Long lockoutDuration = 30L; // Set this value to your desired duration
 
         GlobalConfigurationPropertyData failedLoginAttempts = new GlobalConfigurationPropertyData();
         failedLoginAttempts.setValue(maxFailedLoginAttempts);
@@ -95,13 +95,10 @@ class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
         when(configurationReadPlatformService.retrieveGlobalConfiguration(AccountLockConfigurationConstants.ACCOUNT_LOCK_DURATION))
                 .thenReturn(lockDownDuration);
 
-        AppUser user = new AppUser() {
+        AppUser user = new AppUser();
+        user.setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()));
+        user.setNoOfFailedLoginAttempts(1);
 
-            {
-                setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()));
-                setNoOfFailedLoginAttempts(1);
-            }
-        };
         int initialLoginAttempts = user.getNoOfFailedLoginAttempts();
 
         when(platformUserDetailsService.loadUserByUsername(anyString())).thenReturn(user);
@@ -119,8 +116,8 @@ class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
     @Test
     public void testAuthentication_Prior_MaxFailedAttemptsExceeded() {
         // Arrange
-        final Long maxFailedLoginAttempts = 3l; // Set this value to your desired limit
-        final Long lockoutDuration = 30l; // Set this value to your desired duration
+        final Long maxFailedLoginAttempts = 3L; // Set this value to your desired limit
+        final Long lockoutDuration = 30L; // Set this value to your desired duration
 
         GlobalConfigurationPropertyData failedLoginAttempts = new GlobalConfigurationPropertyData();
         failedLoginAttempts.setValue(maxFailedLoginAttempts);
@@ -134,13 +131,10 @@ class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
 
         LocalDateTime now = LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant());
 
-        AppUser user = new AppUser() {
+        AppUser user = new AppUser();
+        user.setCanLoginAfter(now);
+        user.setNoOfFailedLoginAttempts(2);
 
-            {
-                setCanLoginAfter(now);
-                setNoOfFailedLoginAttempts(2);
-            }
-        };
         int initialLoginAttempts = user.getNoOfFailedLoginAttempts();
 
         when(platformUserDetailsService.loadUserByUsername(anyString())).thenReturn(user);
@@ -165,8 +159,8 @@ class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
     @Test
     public void testAuthentication_MaxFailedAttemptsExceeded() {
         // Arrange
-        final Long maxFailedLoginAttempts = 3l; // Set this value to your desired limit
-        final Long lockoutDuration = 30l; // Set this value to your desired duration
+        final Long maxFailedLoginAttempts = 3L; // Set this value to your desired limit
+        final Long lockoutDuration = 30L; // Set this value to your desired duration
 
         GlobalConfigurationPropertyData failedLoginAttempts = new GlobalConfigurationPropertyData();
         failedLoginAttempts.setValue(maxFailedLoginAttempts);
@@ -178,13 +172,10 @@ class AuthenticationApiResourceTest_MaxFailedAttemptsExceeded {
         when(configurationReadPlatformService.retrieveGlobalConfiguration(AccountLockConfigurationConstants.ACCOUNT_LOCK_DURATION))
                 .thenReturn(lockDownDuration);
 
-        when(platformUserDetailsService.loadUserByUsername(anyString())).thenReturn(new AppUser() {
-
-            {
-                setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()).plusMinutes(lockoutDuration));
-                setNoOfFailedLoginAttempts(3);
-            }
-        });
+        AppUser user = new AppUser();
+        user.setCanLoginAfter(LocalDateTime.now(DateUtils.getDateTimeZoneOfTenant()).plusMinutes(lockoutDuration));
+        user.setNoOfFailedLoginAttempts(3);
+        when(platformUserDetailsService.loadUserByUsername(anyString())).thenReturn(user);
 
         // Act and Assert
         assertThrows(UserLockedOutException.class,
