@@ -19,7 +19,6 @@
 package org.apache.fineract.infrastructure.security.service;
 
 import java.time.LocalDateTime;
-
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.core.service.PlatformEmailService;
 import org.apache.fineract.useradministration.domain.AppUser;
