@@ -187,7 +187,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
             // tenantConnection.getSchemaConnectionParameters());
             //
             var tenantUrl = "jdbc:mariadb://" + tenantConnection.getSchemaServer() + ":" + tenantConnection.getSchemaServerPort() + "/"
-                    + tenantConnection.getSchemaName() + "?useSSL=false";
+                    + tenantConnection.getSchemaName() + "?useSSL=false&allowPublicKeyRetrieval=true";
 
             final var userhierarchy = currentUser.getOffice().getHierarchy();
             var outPutInfo4 = "db URL:" + tenantUrl + "      userhierarchy:" + userhierarchy;
