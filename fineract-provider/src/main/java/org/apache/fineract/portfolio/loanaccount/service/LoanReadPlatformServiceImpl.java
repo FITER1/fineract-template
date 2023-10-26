@@ -2381,6 +2381,7 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
             final Collection<InterestRatePeriodData> intRatePeriodData = new ArrayList<>();
             final Collection<InterestRatePeriodData> intRates = this.floatingRatesReadPlatformService
                     .retrieveInterestRatePeriods(loanData.getLoanProductId());
+            LocalDate previousDate = null;
             for (final InterestRatePeriodData rate : intRates) {
                 if (loanData.getTimeline() != null && rate.getFromDate().compareTo(loanData.getTimeline().getDisbursementDate()) > 0
                         && loanData.isFloatingInterestRate()) {
@@ -2391,6 +2392,16 @@ public class LoanReadPlatformServiceImpl implements LoanReadPlatformService, Loa
                     updateInterestRatePeriodData(rate, loanData);
                     intRatePeriodData.add(rate);
                     break;
+                } else if (loanData.getTimeline() != null && rate.getFromDate().compareTo(loanData.getTimeline().getDisbursementDate()) > 0
+                        && !loanData.isFloatingInterestRate()) {
+                    if (previousDate == null || previousDate.isAfter(rate.getFromDate())) {
+                        // This check is required as the rate List is in ascending order and we need the closest
+                        // applicable rate from disbursement date
+                        updateInterestRatePeriodData(rate, loanData);
+                        intRatePeriodData.clear();
+                        intRatePeriodData.add(rate);
+                        previousDate = rate.getFromDate();
+                    }
                 }
             }
 
