@@ -32,6 +32,7 @@ import org.apache.fineract.infrastructure.core.api.ApiParameterHelper;
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.infrastructure.core.service.database.DatabasePasswordEncryptor;
 import org.apache.fineract.infrastructure.dataqueries.data.ReportExportType;
 import org.apache.fineract.infrastructure.report.annotation.ReportService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
@@ -62,12 +63,16 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
     private final PlatformSecurityContext context;
     private final FineractProperties fineractProperties;
 
+    private final DatabasePasswordEncryptor databasePasswordEncryptor;
+
     @Autowired
-    public PentahoReportingProcessServiceImpl(final PlatformSecurityContext context, final FineractProperties fineractProperties) {
+    public PentahoReportingProcessServiceImpl(final PlatformSecurityContext context, final FineractProperties fineractProperties,
+                                              final DatabasePasswordEncryptor databasePasswordEncryptor) {
         ClassicEngineBoot.getInstance().start();
 
         this.context = context;
         this.fineractProperties = fineractProperties;
+        this.databasePasswordEncryptor = databasePasswordEncryptor;
     }
 
     @Override
@@ -203,7 +208,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
 
             rptParamValues.put("tenantUrl", tenantUrl);
             rptParamValues.put("username", tenantConnection.getSchemaUsername());
-            rptParamValues.put("password", "root");
+            rptParamValues.put("password", databasePasswordEncryptor.decrypt(tenantConnection.getSchemaPassword()));
         } catch (final Exception e) {
             LOGGER.error("error.msg.reporting.error:", e);
             throw new PlatformDataIntegrityException("error.msg.reporting.error", "Pentaho failed: " + e.getMessage(), e);
