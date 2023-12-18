@@ -53,7 +53,7 @@ public class LoanTransactionData {
     private final BigDecimal penaltyChargesPortion;
     private final BigDecimal overpaymentPortion;
     private final BigDecimal unrecognizedIncomePortion;
-    private final String externalId;
+    private String externalId;
     private final AccountTransferData transfer;
     private final BigDecimal fixedEmiAmount;
     private final BigDecimal outstandingLoanBalance;
@@ -69,6 +69,7 @@ public class LoanTransactionData {
     private Collection<CodeValueData> writeOffReasonOptions = null;
 
     private Integer numberOfRepayments = 0;
+    private Integer installmentNumber;
 
     // import fields
     private transient Integer rowIndex;
@@ -85,6 +86,8 @@ public class LoanTransactionData {
     private transient Long accountId;
     private transient String transactionType;
     private List<LoanRepaymentScheduleInstallmentData> loanRepaymentScheduleInstallments;
+
+    private String note;
 
     public static LoanTransactionData importInstance(BigDecimal repaymentAmount, LocalDate lastRepaymentDate, Long repaymentTypeId,
             Integer rowIndex, String locale, String dateFormat) {
@@ -172,10 +175,15 @@ public class LoanTransactionData {
         this.possibleNextRepaymentDate = null;
         this.paymentTypeOptions = null;
         this.writeOffReasonOptions = null;
+        this.numberOfRepayments = null;
     }
 
     public void setNumberOfRepayments(Integer numberOfRepayments) {
         this.numberOfRepayments = numberOfRepayments;
+    }
+
+    public Integer getNumberOfRepayments() {
+        return numberOfRepayments;
     }
 
     public void setLoanRepaymentScheduleInstallments(final List<LoanRepaymentScheduleInstallmentData> loanRepaymentScheduleInstallments) {
@@ -192,13 +200,17 @@ public class LoanTransactionData {
 
     public static LoanTransactionData templateOnTop(final LoanTransactionData loanTransactionData,
             final Collection<PaymentTypeData> paymentTypeOptions) {
-        return new LoanTransactionData(loanTransactionData.id, loanTransactionData.officeId, loanTransactionData.officeName,
-                loanTransactionData.type, loanTransactionData.paymentDetailData, loanTransactionData.currency, loanTransactionData.date,
-                loanTransactionData.amount, loanTransactionData.netDisbursalAmount, loanTransactionData.principalPortion,
-                loanTransactionData.interestPortion, loanTransactionData.feeChargesPortion, loanTransactionData.penaltyChargesPortion,
-                loanTransactionData.overpaymentPortion, loanTransactionData.unrecognizedIncomePortion, paymentTypeOptions,
-                loanTransactionData.externalId, loanTransactionData.transfer, loanTransactionData.fixedEmiAmount,
-                loanTransactionData.outstandingLoanBalance, loanTransactionData.manuallyReversed);
+        final LoanTransactionData loanTransactionTemplate = new LoanTransactionData(loanTransactionData.id, loanTransactionData.officeId,
+                loanTransactionData.officeName, loanTransactionData.type, loanTransactionData.paymentDetailData,
+                loanTransactionData.currency, loanTransactionData.date, loanTransactionData.amount, loanTransactionData.netDisbursalAmount,
+                loanTransactionData.principalPortion, loanTransactionData.interestPortion, loanTransactionData.feeChargesPortion,
+                loanTransactionData.penaltyChargesPortion, loanTransactionData.overpaymentPortion,
+                loanTransactionData.unrecognizedIncomePortion, paymentTypeOptions, loanTransactionData.externalId,
+                loanTransactionData.transfer, loanTransactionData.fixedEmiAmount, loanTransactionData.outstandingLoanBalance,
+                loanTransactionData.manuallyReversed);
+        loanTransactionTemplate.setInstallmentNumber(loanTransactionData.getInstallmentNumber());
+        loanTransactionTemplate.setNumberOfRepayments(loanTransactionData.getNumberOfRepayments());
+        return loanTransactionTemplate;
 
     }
 
@@ -370,5 +382,29 @@ public class LoanTransactionData {
 
     public void setLoanChargePaidByList(Collection<LoanChargePaidByData> loanChargePaidByList) {
         this.loanChargePaidByList = loanChargePaidByList;
+    }
+
+    public Integer getInstallmentNumber() {
+        return installmentNumber;
+    }
+
+    public void setInstallmentNumber(Integer installmentNumber) {
+        this.installmentNumber = installmentNumber;
+    }
+
+    public Collection<PaymentTypeData> getPaymentTypeOptions() {
+        return paymentTypeOptions;
+    }
+
+    public BigDecimal getOutstandingLoanBalance() {
+        return outstandingLoanBalance;
+    }
+
+    public void setExternalId(String externalId) {
+        this.externalId = externalId;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 }

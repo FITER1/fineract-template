@@ -49,6 +49,8 @@ import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanDisbursementDetails;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepository;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
+import org.apache.fineract.portfolio.loanaccount.exception.LoanDisbursalExistingActiveProduct;
 import org.apache.fineract.portfolio.loanaccount.exception.LoanNotFoundException;
 import org.apache.fineract.portfolio.loanaccount.exception.LoanRepaymentScheduleNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,14 +87,14 @@ public final class LoanEventApiJsonValidator {
         Set<String> disbursementParameters = null;
 
         if (isAccountTransfer) {
-            disbursementParameters = new HashSet<>(Arrays.asList("actualDisbursementDate", "externalId", "note", "locale", "dateFormat",
-                    LoanApiConstants.principalDisbursedParameterName, LoanApiConstants.emiAmountParameterName,
+            disbursementParameters = new HashSet<>(Arrays.asList("actualDisbursementDate", "selectedCheques", "externalId", "note",
+                    "locale", "dateFormat", LoanApiConstants.principalDisbursedParameterName, LoanApiConstants.emiAmountParameterName,
                     LoanApiConstants.disbursementNetDisbursalAmountParameterName));
         } else {
-            disbursementParameters = new HashSet<>(Arrays.asList("actualDisbursementDate", "externalId", "note", "locale", "dateFormat",
-                    "paymentTypeId", "accountNumber", "checkNumber", "routingCode", "receiptNumber", "bankNumber", "adjustRepaymentDate",
-                    LoanApiConstants.principalDisbursedParameterName, LoanApiConstants.emiAmountParameterName,
-                    LoanApiConstants.postDatedChecks, LoanApiConstants.disbursementNetDisbursalAmountParameterName));
+            disbursementParameters = new HashSet<>(Arrays.asList("actualDisbursementDate", "selectedCheques", "externalId", "note",
+                    "locale", "dateFormat", "paymentTypeId", "accountNumber", "checkNumber", "routingCode", "receiptNumber", "bankNumber",
+                    "adjustRepaymentDate", LoanApiConstants.principalDisbursedParameterName, LoanApiConstants.emiAmountParameterName,
+                    LoanApiConstants.postDatedChecks, LoanApiConstants.disbursementNetDisbursalAmountParameterName, "borrowerCycle"));
         }
 
         final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
@@ -188,6 +190,24 @@ public final class LoanEventApiJsonValidator {
         }
     }
 
+    public void validateDisbursementExistingActiveLoan(final Long loanId) {
+        final Loan loan = this.loanRepository.findById(loanId).orElseThrow(() -> new LoanNotFoundException(loanId));
+
+        Long loanProductCounter;
+        if (loan.isGroupLoan()) {
+            loanProductCounter = this.loanRepository.getCountActiveLoansByProductAndGroup(loan.productId(), loan.getGroupId(),
+                    LoanStatus.ACTIVE.getValue());
+        } else {
+            loanProductCounter = this.loanRepository.getCountActiveLoansByProductAndClient(loan.productId(), loan.getClientId(),
+                    LoanStatus.ACTIVE.getValue());
+        }
+
+        // Disbursement should be not allowed if maxLoanProductCounter is greater than zero
+        if (loan.getLoanProduct().useBorrowerCycle() && loanProductCounter > 0) {
+            throw new LoanDisbursalExistingActiveProduct(loan.getLoanProduct().getName());
+        }
+    }
+
     public void validateTransaction(final String json) {
 
         if (StringUtils.isBlank(json)) {
@@ -223,9 +243,9 @@ public final class LoanEventApiJsonValidator {
             throw new InvalidJsonException();
         }
 
-        final Set<String> transactionParameters = new HashSet<>(
-                Arrays.asList("transactionDate", "transactionAmount", "externalId", "note", "locale", "dateFormat", "paymentTypeId",
-                        "accountNumber", "checkNumber", "routingCode", "receiptNumber", "bankNumber", "loanId"));
+        final Set<String> transactionParameters = new HashSet<>(Arrays.asList("transactionDate", "transactionAmount", "externalId", "note",
+                "locale", "dateFormat", "paymentTypeId", "accountNumber", "checkNumber", "routingCode", "receiptNumber", "bankNumber",
+                "loanId", "isBatchPayment", "adjustGuarantee"));
 
         final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
         this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, transactionParameters);

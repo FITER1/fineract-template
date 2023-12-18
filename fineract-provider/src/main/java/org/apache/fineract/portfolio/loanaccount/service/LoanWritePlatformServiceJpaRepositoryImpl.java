@@ -23,6 +23,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,6 +61,9 @@ import org.apache.fineract.infrastructure.jobs.annotation.CronTarget;
 import org.apache.fineract.infrastructure.jobs.exception.JobExecutionException;
 import org.apache.fineract.infrastructure.jobs.service.JobName;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.organisation.bankcheque.domain.BankChequeStatus;
+import org.apache.fineract.organisation.bankcheque.domain.Cheque;
+import org.apache.fineract.organisation.bankcheque.domain.ChequeJpaRepository;
 import org.apache.fineract.organisation.holiday.domain.Holiday;
 import org.apache.fineract.organisation.holiday.domain.HolidayRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrency;
@@ -218,6 +222,7 @@ import org.apache.fineract.portfolio.repaymentwithpostdatedchecks.domain.PostDat
 import org.apache.fineract.portfolio.repaymentwithpostdatedchecks.domain.PostDatedChecksRepository;
 import org.apache.fineract.portfolio.repaymentwithpostdatedchecks.service.RepaymentWithPostDatedChecksAssembler;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
+import org.apache.fineract.portfolio.savings.service.SavingsAccountWritePlatformService;
 import org.apache.fineract.portfolio.transfer.api.TransferApiConstants;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -273,6 +278,9 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
     private final PostDatedChecksRepository postDatedChecksRepository;
     private final LumaAccountingProcessorForLoan lumaAccountingProcessorForLoan;
     private final BitaCoraMasterRepository bitaCoraMasterRepository;
+    private final ChequeJpaRepository chequeJpaRepository;
+
+    private final SavingsAccountWritePlatformService savingsAccountWritePlatformService;
 
     private LoanLifecycleStateMachine defaultLoanLifecycleStateMachine() {
         final List<LoanStatus> allowedLoanStatuses = Arrays.asList(LoanStatus.values());
@@ -358,6 +366,9 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         }
         checkClientOrGroupActive(loan);
 
+        // validate if lDisbursement is allowed for this loan product
+        this.loanEventApiJsonValidator.validateDisbursementExistingActiveLoan(loanId);
+
         final LocalDate nextPossibleRepaymentDate = loan.getNextPossibleRepaymentDateForRescheduling();
         final LocalDate rescheduledRepaymentDate = command.localDateValueOfParameterNamed("adjustRepaymentDate");
 
@@ -394,7 +405,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 .isPaymnetypeApplicableforDisbursementCharge();
 
         // Recalculate first repayment date based in actual disbursement date.
-        updateLoanCounters(loan, actualDisbursementDate);
+        updateLoanCounters(loan, actualDisbursementDate, command);
         Money amountBeforeAdjust = loan.getPrincpal();
         loan.validateAccountStatus(LoanEvent.LOAN_DISBURSED);
         boolean canDisburse = loan.canDisburse(actualDisbursementDate);
@@ -703,7 +714,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
             // assuming repayment schedule won't regenerate because expected
             // disbursement and actual disbursement happens on same date
             loan.validateAccountStatus(LoanEvent.LOAN_DISBURSED);
-            updateLoanCounters(loan, actualDisbursementDate);
+            updateLoanCounters(loan, actualDisbursementDate, null);
             boolean canDisburse = loan.canDisburse(actualDisbursementDate);
             ChangedTransactionDetail changedTransactionDetail = null;
             if (canDisburse) {
@@ -846,6 +857,19 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 BigDecimal netDisbursalAmount = loan.getApprovedPrincipal().subtract(loanOutstanding);
                 loan.adjustNetDisbursalAmount(netDisbursalAmount);
             }
+
+            if (loan.getCheque() != null) {
+                Long userId = currentUser.getId();
+                final LocalDateTime localDateTime = DateUtils.getLocalDateTimeOfSystem();
+                LocalDate localDate = DateUtils.getBusinessLocalDate();
+                Cheque cheque = loan.getCheque();
+                cheque.setStatus(BankChequeStatus.VOIDED.getValue());
+                cheque.stampAudit(userId, localDateTime);
+                cheque.setDescription("Voided by undoing loan disbursal");
+                cheque.setVoidedBy(currentUser);
+                cheque.setVoidedDate(localDate);
+                this.chequeJpaRepository.saveAndFlush(cheque);
+            }
             saveAndFlushLoanWithDataIntegrityViolationChecks(loan);
             this.accountTransfersWritePlatformService.reverseAllTransactions(loanId, PortfolioAccountType.LOAN);
             String noteText = null;
@@ -949,6 +973,13 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
                 }
             }
             this.loanAccountDomainService.updateLoanCollateralTransaction(loanCollateralManagements);
+        }
+
+        // FBR-437 release gurantee
+        final boolean adjustGuarantee = command.booleanPrimitiveValueOfParameterNamed("adjustGuarantee");
+
+        if (adjustGuarantee) {
+            this.savingsAccountWritePlatformService.releaseLoanGuarantee(loanId, command);
         }
 
         return commandProcessingResultBuilder.withCommandId(command.commandId()) //
@@ -1269,7 +1300,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         final List<Long> existingTransactionIds = new ArrayList<>();
         final List<Long> existingReversedTransactionIds = new ArrayList<>();
 
-        updateLoanCounters(loan, loan.getDisbursementDate());
+        updateLoanCounters(loan, loan.getDisbursementDate(), null);
 
         LocalDate recalculateFrom = null;
         if (loan.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
@@ -1322,7 +1353,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         final List<Long> existingTransactionIds = new ArrayList<>();
         final List<Long> existingReversedTransactionIds = new ArrayList<>();
 
-        updateLoanCounters(loan, loan.getDisbursementDate());
+        updateLoanCounters(loan, loan.getDisbursementDate(), null);
 
         LocalDate recalculateFrom = null;
         if (loan.repaymentScheduleDetail().isInterestRecalculationEnabled()) {
@@ -2430,7 +2461,7 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
 
     }
 
-    private void updateLoanCounters(final Loan loan, final LocalDate actualDisbursementDate) {
+    private void updateLoanCounters(final Loan loan, final LocalDate actualDisbursementDate, JsonCommand command) {
 
         if (loan.isGroupLoan()) {
             final List<Loan> loansToUpdateForLoanCounter = this.loanRepositoryWrapper.getGroupLoansDisbursedAfter(actualDisbursementDate,
@@ -2441,7 +2472,13 @@ public class LoanWritePlatformServiceJpaRepositoryImpl implements LoanWritePlatf
         } else {
             final List<Loan> loansToUpdateForLoanCounter = this.loanRepositoryWrapper
                     .getClientOrJLGLoansDisbursedAfter(actualDisbursementDate, loan.getClientId());
-            final Integer newLoanCounter = getNewClientOrJLGLoanCounter(loan);
+            Integer newLoanCounter = null;
+            if (command != null) {
+                newLoanCounter = command.integerValueOfParameterNamed("borrowerCycle");
+            }
+            if (newLoanCounter == null || newLoanCounter == 0) {
+                newLoanCounter = getNewClientOrJLGLoanCounter(loan);
+            }
             final Integer newLoanProductCounter = getNewClientOrJLGLoanProductCounter(loan);
             updateLoanCounter(loan, loansToUpdateForLoanCounter, newLoanCounter, newLoanProductCounter);
         }
