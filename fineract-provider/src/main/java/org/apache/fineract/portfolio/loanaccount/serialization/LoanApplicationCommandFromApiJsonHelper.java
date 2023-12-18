@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.InvalidJsonException;
@@ -97,7 +98,34 @@ public final class LoanApplicationCommandFromApiJsonHelper {
             LoanApiConstants.applicationId, // glim specific
             LoanApiConstants.lastApplication, // glim specific
             LoanApiConstants.daysInYearTypeParameterName, LoanApiConstants.fixedPrincipalPercentagePerInstallmentParamName,
-            LoanApiConstants.cupoIdParameterName));
+            LoanApiConstants.loanCycleCompletedParamName, LoanApiConstants.rentMortgageFeeParamName,
+            LoanApiConstants.monthlyIncomeParamName, LoanApiConstants.familyExpensesParamName,
+            LoanApiConstants.totalExternalLoanAmountParamName, LoanApiConstants.totalInstallmentsParamName,
+            LoanApiConstants.clientTypeParamName, LoanApiConstants.houseHoldGoodsParamName, LoanApiConstants.businessActivitiesParamName,
+            LoanApiConstants.businessLocationParamName, LoanApiConstants.businessExperienceParamName, LoanApiConstants.salesValueParamName,
+            LoanApiConstants.businessPurchasesParamName, LoanApiConstants.businessProfitParamName, LoanApiConstants.clientProfitParamName,
+            LoanApiConstants.inventoriesParamName, LoanApiConstants.visitBusinessParamName, LoanApiConstants.familySupportParamName,
+            LoanApiConstants.businessEvolutionParamName, LoanApiConstants.numberOfApprovalsParamName,
+            LoanApiConstants.recommenderNameParamName, LoanApiConstants.monthlyPaymentCapacityParamName,
+            LoanApiConstants.loanPurposeParamName, LoanApiConstants.currentCreditValueParamName, LoanApiConstants.requestedValueParamName,
+            LoanApiConstants.groupAuthorizedValueParamName, LoanApiConstants.facilitatorProposedValueParamName,
+            LoanApiConstants.proposedFeeParamName, LoanApiConstants.agencyAuthorizedAmountParamName,
+            LoanApiConstants.authorizedFeeParamName, LoanApiConstants.totalIncomeParamName, LoanApiConstants.totalExpendituresParamName,
+            LoanApiConstants.availableMonthlyParamName, LoanApiConstants.facValueParamName, LoanApiConstants.debtLevelParamName,
+            LoanApiConstants.earlyCancellationReasonParamName, LoanApiConstants.sourceOfFundsParamName,
+            LoanApiConstants.clientLoanRequestNumberParamName, LoanApiConstants.dateRequestedParamName, LoanApiConstants.positionParamName,
+            LoanApiConstants.fullNameParamName, LoanApiConstants.lastNameParamName, LoanApiConstants.maritalStatusParamName,
+            LoanApiConstants.educationLevelParamName, LoanApiConstants.schoolingYearsParamName, LoanApiConstants.noOfChildrenParamName,
+            LoanApiConstants.nationalityParamName, LoanApiConstants.languageParamName, LoanApiConstants.dpiParamName,
+            LoanApiConstants.nitParamName, LoanApiConstants.jobTypeParamName, LoanApiConstants.occupancyClassificationParamName,
+            LoanApiConstants.actsOwnBehalfParamName, LoanApiConstants.onBehalfOfParamName, LoanApiConstants.politicalPositionParamName,
+            LoanApiConstants.politicalOfficeParamName, LoanApiConstants.housingTypeParamName, LoanApiConstants.addressParamName,
+            LoanApiConstants.populatedPlaceParamName, LoanApiConstants.referencePointParamName, LoanApiConstants.phoneNumberParamName,
+            LoanApiConstants.relativeNumberParamName, LoanApiConstants.yearsInCommunityParamName, LoanApiConstants.PREQUALIFICATION_ID,
+            LoanApiConstants.cupoIdParameterName, LoanApiConstants.externalLoansParamName, LoanApiConstants.CASE_ID,
+            LoanApiConstants.paymentCapacityParamName, LoanApiConstants.facilitatorParamName, LoanApiConstants.maidenNameParamName,
+            LoanApiConstants.politicallyExposedParamName, LoanApiConstants.otherIncomeParamName, LoanApiConstants.currentLoansParamName,
+            LoanApiConstants.businessActivityParamName, LoanApiConstants.LOAN_ADDITIONAL_DATA, "borrowerCycle", "isBulkImport"));
 
     private final FromJsonHelper fromApiJsonHelper;
     private final CalculateLoanScheduleQueryFromApiJsonHelper apiJsonHelper;
@@ -110,6 +138,18 @@ public final class LoanApplicationCommandFromApiJsonHelper {
         this.fromApiJsonHelper = fromApiJsonHelper;
         this.apiJsonHelper = apiJsonHelper;
         this.clientCollateralManagementRepositoryWrapper = clientCollateralManagementRepositoryWrapper;
+    }
+
+    public void validateLoanAdditionalData(final JsonCommand command) {
+        final JsonElement element = command.jsonElement(LoanApiConstants.LOAN_ADDITIONAL_DATA);
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("loan-addition-data");
+        baseDataValidator.reset().parameter(LoanApiConstants.LOAN_ADDITIONAL_DATA).value(element).notNull();
+        final String area = this.fromApiJsonHelper.extractStringNamed("area", element);
+        baseDataValidator.reset().parameter("area").value(area).ignoreIfNull().notExceedingLengthOf(500);
+        if (!dataValidationErrors.isEmpty()) {
+            throw new PlatformApiDataValidationException(dataValidationErrors);
+        }
     }
 
     public void validateForCreate(final String json, final boolean isMeetingMandatoryForJLGLoans, final LoanProduct loanProduct) {
@@ -209,7 +249,7 @@ public final class LoanApplicationCommandFromApiJsonHelper {
         final String loanOfficerIdParameterName = "loanOfficerId";
         if (this.fromApiJsonHelper.parameterExists(loanOfficerIdParameterName, element)) {
             final Long loanOfficerId = this.fromApiJsonHelper.extractLongNamed(loanOfficerIdParameterName, element);
-            baseDataValidator.reset().parameter(loanOfficerIdParameterName).value(loanOfficerId).ignoreIfNull().integerGreaterThanZero();
+            // baseDataValidator.reset().parameter(loanOfficerIdParameterName).value(loanOfficerId).ignoreIfNull().integerGreaterThanZero();
         }
 
         final String loanPurposeIdParameterName = "loanPurposeId";
@@ -570,6 +610,13 @@ public final class LoanApplicationCommandFromApiJsonHelper {
             atLeastOneParameterPassedForUpdate = true;
             final Long productId = this.fromApiJsonHelper.extractLongNamed(productIdParameterName, element);
             baseDataValidator.reset().parameter(productIdParameterName).value(productId).notNull().integerGreaterThanZero();
+        }
+
+        final String prequalificationIdParameterName = "prequalificationId";
+        if (this.fromApiJsonHelper.parameterExists(prequalificationIdParameterName, element)) {
+            atLeastOneParameterPassedForUpdate = true;
+            final Long prequalificationId = this.fromApiJsonHelper.extractLongNamed(prequalificationIdParameterName, element);
+            baseDataValidator.reset().parameter(productIdParameterName).value(prequalificationId).notNull().integerGreaterThanZero();
         }
 
         final String accountNoParameterName = "accountNo";

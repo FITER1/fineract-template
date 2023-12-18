@@ -23,15 +23,18 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.persistence.PersistenceException;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.accounting.journalentry.data.LumaBitacoraTransactionTypeEnum;
@@ -42,6 +45,7 @@ import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumb
 import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumberFormatRepositoryWrapper;
 import org.apache.fineract.infrastructure.accountnumberformat.domain.EntityAccountType;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
+import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationProperty;
 import org.apache.fineract.infrastructure.configuration.domain.GlobalConfigurationRepositoryWrapper;
@@ -55,6 +59,8 @@ import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRu
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
+import org.apache.fineract.infrastructure.core.serialization.JsonParserHelper;
+import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.dataqueries.data.EntityTables;
 import org.apache.fineract.infrastructure.dataqueries.data.StatusEnum;
 import org.apache.fineract.infrastructure.dataqueries.service.EntityDatatableChecksWritePlatformService;
@@ -66,11 +72,22 @@ import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityToEn
 import org.apache.fineract.infrastructure.entityaccess.domain.FineractEntityToEntityMappingRepository;
 import org.apache.fineract.infrastructure.entityaccess.exception.NotOfficeSpecificProductException;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.organisation.bankcheque.domain.BankChequeStatus;
+import org.apache.fineract.organisation.bankcheque.domain.Cheque;
+import org.apache.fineract.organisation.bankcheque.domain.ChequeBatchRepositoryWrapper;
+import org.apache.fineract.organisation.prequalification.data.LoanAdditionalData;
+import org.apache.fineract.organisation.prequalification.domain.LoanAdditionProperties;
+import org.apache.fineract.organisation.prequalification.domain.LoanAdditionalPropertiesRepository;
+import org.apache.fineract.organisation.prequalification.domain.PrequalificationGroup;
+import org.apache.fineract.organisation.prequalification.domain.PrequalificationGroupRepositoryWrapper;
+import org.apache.fineract.organisation.prequalification.exception.PrequalificationNotProvidedException;
+import org.apache.fineract.organisation.prequalification.service.BureauValidationWritePlatformServiceImpl;
 import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationType;
 import org.apache.fineract.portfolio.account.domain.AccountAssociations;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationsRepository;
 import org.apache.fineract.portfolio.accountdetails.domain.AccountType;
+import org.apache.fineract.portfolio.blacklist.domain.BlacklistStatus;
 import org.apache.fineract.portfolio.businessevent.domain.loan.LoanApprovedBusinessEvent;
 import org.apache.fineract.portfolio.businessevent.domain.loan.LoanCreatedBusinessEvent;
 import org.apache.fineract.portfolio.businessevent.domain.loan.LoanRejectedBusinessEvent;
@@ -89,9 +106,9 @@ import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.client.domain.AccountNumberGenerator;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
+import org.apache.fineract.portfolio.client.exception.ClientBlacklistedException;
 import org.apache.fineract.portfolio.client.exception.ClientNotActiveException;
 import org.apache.fineract.portfolio.collateralmanagement.domain.ClientCollateralManagement;
-import org.apache.fineract.portfolio.collateralmanagement.domain.ClientCollateralManagementRepository;
 import org.apache.fineract.portfolio.collateralmanagement.service.LoanCollateralAssembler;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
 import org.apache.fineract.portfolio.cupo.domain.Cupo;
@@ -102,15 +119,18 @@ import org.apache.fineract.portfolio.group.domain.GroupRepositoryWrapper;
 import org.apache.fineract.portfolio.group.exception.GroupMemberNotFoundInGSIMException;
 import org.apache.fineract.portfolio.group.exception.GroupNotActiveException;
 import org.apache.fineract.portfolio.loanaccount.api.LoanApiConstants;
+import org.apache.fineract.portfolio.loanaccount.command.DisburseByChequesCommand;
 import org.apache.fineract.portfolio.loanaccount.data.LoanChargeData;
 import org.apache.fineract.portfolio.loanaccount.data.ScheduleGeneratorDTO;
+import org.apache.fineract.portfolio.loanaccount.domain.AdditionalsExtraLoans;
 import org.apache.fineract.portfolio.loanaccount.domain.DefaultLoanLifecycleStateMachine;
 import org.apache.fineract.portfolio.loanaccount.domain.GLIMAccountInfoRepository;
+import org.apache.fineract.portfolio.loanaccount.domain.GroupLoanAdditionals;
+import org.apache.fineract.portfolio.loanaccount.domain.GroupLoanAdditionalsRepository;
 import org.apache.fineract.portfolio.loanaccount.domain.GroupLoanIndividualMonitoringAccount;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCharge;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanCollateralManagement;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanCollateralManagementRepository;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanDisbursementDetails;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanLifecycleStateMachine;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallmentRepository;
@@ -122,6 +142,7 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanSummaryWrapper;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTopupDetails;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanTransactionType;
 import org.apache.fineract.portfolio.loanaccount.exception.LoanApplicationDateException;
+import org.apache.fineract.portfolio.loanaccount.exception.LoanApplicationNotInClosedStateCannotBeModified;
 import org.apache.fineract.portfolio.loanaccount.exception.LoanApplicationNotInSubmittedAndPendingApprovalStateCannotBeDeleted;
 import org.apache.fineract.portfolio.loanaccount.exception.LoanApplicationNotInSubmittedAndPendingApprovalStateCannotBeModified;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.AprCalculator;
@@ -129,6 +150,7 @@ import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanApplica
 import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleModel;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleAssembler;
 import org.apache.fineract.portfolio.loanaccount.loanschedule.service.LoanScheduleCalculationPlatformService;
+import org.apache.fineract.portfolio.loanaccount.serialization.DisburseByChequesCommandFromApiJsonDeserializer;
 import org.apache.fineract.portfolio.loanaccount.serialization.LoanApplicationCommandFromApiJsonHelper;
 import org.apache.fineract.portfolio.loanaccount.serialization.LoanApplicationTransitionApiJsonValidator;
 import org.apache.fineract.portfolio.loanproduct.LoanProductConstants;
@@ -148,12 +170,17 @@ import org.apache.fineract.portfolio.rate.service.RateAssembler;
 import org.apache.fineract.portfolio.savings.data.GroupSavingsIndividualMonitoringAccountData;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountAssembler;
+import org.apache.fineract.portfolio.savings.domain.SavingsAccountRepositoryWrapper;
 import org.apache.fineract.portfolio.savings.service.GSIMReadPlatformService;
+import org.apache.fineract.portfolio.savings.service.SavingsAccountWritePlatformService;
 import org.apache.fineract.useradministration.domain.AppUser;
+import org.apache.fineract.useradministration.domain.AppUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -170,6 +197,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
     private final LoanProductDataValidator loanProductCommandFromApiJsonDeserializer;
     private final LoanApplicationCommandFromApiJsonHelper fromApiJsonDeserializer;
     private final LoanRepositoryWrapper loanRepositoryWrapper;
+    private final GroupLoanAdditionalsRepository groupLoanAdditionalsRepository;
     private final NoteRepository noteRepository;
     private final LoanScheduleCalculationPlatformService calculationPlatformService;
     private final LoanAssembler loanAssembler;
@@ -187,7 +215,6 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
     private final SavingsAccountAssembler savingsAccountAssembler;
     private final AccountAssociationsRepository accountAssociationsRepository;
     private final LoanReadPlatformService loanReadPlatformService;
-    private final LoanRepaymentScheduleInstallmentRepository repaymentScheduleInstallmentRepository;
     private final AccountNumberFormatRepositoryWrapper accountNumberFormatRepository;
     private final BusinessEventNotifierService businessEventNotifierService;
     private final ConfigurationDomainService configurationDomainService;
@@ -205,12 +232,22 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
     private final GLIMAccountInfoRepository glimRepository;
     private final LoanRepository loanRepository;
     private final GSIMReadPlatformService gsimReadPlatformService;
-    private final LoanCollateralManagementRepository loanCollateralManagementRepository;
-    private final ClientCollateralManagementRepository clientCollateralManagementRepository;
     private final CupoRepositoryWrapper cupoRepositoryWrapper;
     private final LumaAccountingProcessorForLoan lumaAccountingProcessorForLoan;
+    private final JdbcTemplate jdbcTemplate;
+    private final CodeValueRepositoryWrapper codeValueRepository;
+    private final DisburseByChequesCommandFromApiJsonDeserializer disburseByChequesCommandFromApiJsonDeserializer;
+    private final ChequeBatchRepositoryWrapper chequeBatchRepositoryWrapper;
+    private final PrequalificationGroupRepositoryWrapper prequalificationGroupRepositoryWrapper;
     @Autowired
     private BitaCoraMasterRepository bitaCoraMasterRepository;
+
+    private final SavingsAccountWritePlatformService savingsAccountWritePlatformService;
+
+    private final SavingsAccountRepositoryWrapper savingsAccountRepositoryWrapper;
+    private final AppUserRepository appUserRepository;
+    private final BureauValidationWritePlatformServiceImpl bureauValidationWritePlatformService;
+    private final LoanAdditionalPropertiesRepository loanAdditionalPropertiesRepository;
 
     @Autowired
     public LoanApplicationWritePlatformServiceJpaRepositoryImpl(final PlatformSecurityContext context, final FromJsonHelper fromJsonHelper,
@@ -222,7 +259,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             final NoteRepository noteRepository, final LoanScheduleCalculationPlatformService calculationPlatformService,
             final ClientRepositoryWrapper clientRepository, final LoanProductRepository loanProductRepository,
             final AccountNumberGenerator accountNumberGenerator, final LoanSummaryWrapper loanSummaryWrapper,
-            final GroupRepositoryWrapper groupRepository,
+            final GroupRepositoryWrapper groupRepository, final CodeValueRepositoryWrapper codeValueRepository,
             final LoanRepaymentScheduleTransactionProcessorFactory loanRepaymentScheduleTransactionProcessorFactory,
             final CalendarRepository calendarRepository, final CalendarInstanceRepository calendarInstanceRepository,
             final SavingsAccountAssembler savingsAccountAssembler, final AccountAssociationsRepository accountAssociationsRepository,
@@ -232,15 +269,21 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             final LoanScheduleAssembler loanScheduleAssembler, final LoanUtilService loanUtilService,
             final CalendarReadPlatformService calendarReadPlatformService,
             final GlobalConfigurationRepositoryWrapper globalConfigurationRepository,
-            final FineractEntityToEntityMappingRepository repository,
+            final FineractEntityToEntityMappingRepository repository, final AppUserRepository appUserRepository,
             final FineractEntityRelationRepository fineractEntityRelationRepository,
             final EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService,
             final GLIMAccountInfoWritePlatformService glimAccountInfoWritePlatformService, final GLIMAccountInfoRepository glimRepository,
             final LoanRepository loanRepository, final GSIMReadPlatformService gsimReadPlatformService, final RateAssembler rateAssembler,
-            final LoanProductReadPlatformService loanProductReadPlatformService,
-            final LoanCollateralManagementRepository loanCollateralManagementRepository,
-            final ClientCollateralManagementRepository clientCollateralManagementRepository,
-            final CupoRepositoryWrapper cupoRepositoryWrapper, final LumaAccountingProcessorForLoan lumaAccountingProcessorForLoan) {
+            final LoanProductReadPlatformService loanProductReadPlatformService, final JdbcTemplate jdbcTemplate,
+            final CupoRepositoryWrapper cupoRepositoryWrapper, final LumaAccountingProcessorForLoan lumaAccountingProcessorForLoan,
+            DisburseByChequesCommandFromApiJsonDeserializer disburseByChequesCommandFromApiJsonDeserializer,
+            ChequeBatchRepositoryWrapper chequeBatchRepositoryWrapper,
+            PrequalificationGroupRepositoryWrapper prequalificationGroupRepositoryWrapper,
+            final SavingsAccountWritePlatformService savingsAccountWritePlatformService,
+            final SavingsAccountRepositoryWrapper savingsAccountRepositoryWrapper,
+            final BureauValidationWritePlatformServiceImpl bureauValidationWritePlatformService,
+            final LoanAdditionalPropertiesRepository loanAdditionalPropertiesRepository,
+            final GroupLoanAdditionalsRepository groupLoanAdditionalsRepository) {
         this.context = context;
         this.fromJsonHelper = fromJsonHelper;
         this.loanApplicationTransitionApiJsonValidator = loanApplicationTransitionApiJsonValidator;
@@ -263,7 +306,6 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         this.calendarInstanceRepository = calendarInstanceRepository;
         this.savingsAccountAssembler = savingsAccountAssembler;
         this.accountAssociationsRepository = accountAssociationsRepository;
-        this.repaymentScheduleInstallmentRepository = repaymentScheduleInstallmentRepository;
         this.loanReadPlatformService = loanReadPlatformService;
         this.accountNumberFormatRepository = accountNumberFormatRepository;
         this.businessEventNotifierService = businessEventNotifierService;
@@ -281,10 +323,19 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         this.glimRepository = glimRepository;
         this.loanRepository = loanRepository;
         this.gsimReadPlatformService = gsimReadPlatformService;
-        this.loanCollateralManagementRepository = loanCollateralManagementRepository;
-        this.clientCollateralManagementRepository = clientCollateralManagementRepository;
         this.cupoRepositoryWrapper = cupoRepositoryWrapper;
         this.lumaAccountingProcessorForLoan = lumaAccountingProcessorForLoan;
+        this.jdbcTemplate = jdbcTemplate;
+        this.codeValueRepository = codeValueRepository;
+        this.disburseByChequesCommandFromApiJsonDeserializer = disburseByChequesCommandFromApiJsonDeserializer;
+        this.chequeBatchRepositoryWrapper = chequeBatchRepositoryWrapper;
+        this.prequalificationGroupRepositoryWrapper = prequalificationGroupRepositoryWrapper;
+        this.savingsAccountWritePlatformService = savingsAccountWritePlatformService;
+        this.savingsAccountRepositoryWrapper = savingsAccountRepositoryWrapper;
+        this.groupLoanAdditionalsRepository = groupLoanAdditionalsRepository;
+        this.appUserRepository = appUserRepository;
+        this.bureauValidationWritePlatformService = bureauValidationWritePlatformService;
+        this.loanAdditionalPropertiesRepository = loanAdditionalPropertiesRepository;
     }
 
     private LoanLifecycleStateMachine defaultLoanLifecycleStateMachine() {
@@ -306,6 +357,20 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             if (clientId != null) {
                 Client client = this.clientRepository.findOneWithNotFoundDetection(clientId);
                 officeSpecificLoanProductValidation(productId, client.getOffice().getId());
+
+                String dpiNumber = client.getDpiNumber();
+                if (dpiNumber != null) {
+                    String blacklistString = "select count(*) from m_client_blacklist where dpi=? and status=?";
+                    Long blacklisted = jdbcTemplate.queryForObject(blacklistString, Long.class, dpiNumber,
+                            BlacklistStatus.ACTIVE.getValue());
+                    if (blacklisted > 0) {
+                        String blacklistReason = "select type_enum from m_client_blacklist where dpi=? and status=?";
+                        Integer typification = jdbcTemplate.queryForObject(blacklistReason, Integer.class, dpiNumber,
+                                BlacklistStatus.ACTIVE.getValue());
+                        CodeValue typificationCodeValue = this.codeValueRepository.findOneWithNotFoundDetection(typification.longValue());
+                        throw new ClientBlacklistedException(typificationCodeValue.getDescription());
+                    }
+                }
             }
             final Long groupId = this.fromJsonHelper.extractLongNamed("groupId", command.parsedJson());
             if (groupId != null) {
@@ -329,13 +394,18 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("loan");
 
             if (loanProduct.useBorrowerCycle()) {
-                Integer cycleNumber = 0;
-                if (clientId != null) {
-                    cycleNumber = this.loanReadPlatformService.retriveLoanCounter(clientId, loanProduct.getId());
-                } else if (groupId != null) {
-                    cycleNumber = this.loanReadPlatformService.retriveLoanCounter(groupId, AccountType.GROUP.getValue(),
-                            loanProduct.getId());
+                Integer cycleNumber = null;
+                cycleNumber = this.fromJsonHelper.extractIntegerWithLocaleNamed("borrowerCycle", command.parsedJson());
+                if (cycleNumber == null) cycleNumber = 0;
+                if (cycleNumber == 0) {
+                    if (clientId != null) {
+                        cycleNumber = this.loanReadPlatformService.retriveLoanCounter(clientId, loanProduct.getId());
+                    } else if (groupId != null) {
+                        cycleNumber = this.loanReadPlatformService.retriveLoanCounter(groupId, AccountType.GROUP.getValue(),
+                                loanProduct.getId());
+                    }
                 }
+
                 this.loanProductCommandFromApiJsonDeserializer.validateMinMaxConstraints(command.parsedJson(), baseDataValidator,
                         loanProduct, cycleNumber);
             } else {
@@ -343,7 +413,13 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                         loanProduct);
             }
             if (!dataValidationErrors.isEmpty()) {
-                throw new PlatformApiDataValidationException(dataValidationErrors);
+                StringBuffer err = new StringBuffer();
+                for (ApiParameterError error : dataValidationErrors) {
+                    err.append(error.getDeveloperMessage()).append("\n");
+                }
+
+                throw new PlatformApiDataValidationException("validation.msg.validation.errors.exist", err.toString(),
+                        dataValidationErrors);
             }
 
             final Loan newLoanApplication = this.loanAssembler.assembleFrom(command);
@@ -416,7 +492,33 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                 }
             }
 
+            // contract number generation
+            StringBuilder contractBuilder = new StringBuilder();
+            String countLoansSql = "select count(*) from m_loan where product_id = ? and client_id =? and approvedon_date is not null";
+            Long productLoansCount = this.jdbcTemplate.queryForObject(countLoansSql, Long.class, loanProduct.getId(), clientId);
+            contractBuilder.append(loanProduct.getShortName());
+            if (clientId != null) {
+                contractBuilder.append(StringUtils.leftPad(clientId.toString(), 8, '0'));
+            } else if (groupId != null) {
+                contractBuilder.append(StringUtils.leftPad(groupId.toString(), 8, '0'));
+            }
+            contractBuilder.append(StringUtils.leftPad(productLoansCount.toString(), 8, '0'));
+            contractBuilder.append("00000000");
+            newLoanApplication.updateLoanContract(contractBuilder.toString());
+
             this.loanRepositoryWrapper.saveAndFlush(newLoanApplication);
+
+            Long facilitatorId = command.longValueOfParameterNamed("facilitator");
+            AppUser facilitator = null;
+            if (facilitatorId != null) {
+                facilitator = this.appUserRepository.findById(facilitatorId)
+                        .orElseThrow(() -> new GeneralPlatformDomainRuleException("error.msg.loan.facilitator.not.found",
+                                "Facilitator with identifier " + facilitatorId + " does not exist"));
+            }
+            GroupLoanAdditionals groupLoanAdditionals = GroupLoanAdditionals.assembleFromJson(command, newLoanApplication, facilitator);
+            addExternalLoans(groupLoanAdditionals, command);
+
+            this.groupLoanAdditionalsRepository.save(groupLoanAdditionals);
 
             if (loanProduct.isInterestRecalculationEnabled()) {
                 this.fromApiJsonDeserializer.validateLoanForInterestRecalculation(newLoanApplication);
@@ -615,6 +717,23 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                 this.accountAssociationsRepository.save(accountAssociations);
             }
 
+            // Additional Data (Individual Prequalification)
+            final PrequalificationGroup prequalificationGroup = newLoanApplication.getPrequalificationGroup();
+            if (prequalificationGroup != null && prequalificationGroup.isPrequalificationTypeIndividual()) {
+                final JsonElement loanAdditionalDataJson = command.jsonElement(LoanApiConstants.LOAN_ADDITIONAL_DATA);
+                if (loanAdditionalDataJson != null && loanAdditionalDataJson.isJsonObject()) {
+                    this.fromApiJsonDeserializer.validateLoanAdditionalData(command);
+                    final LoanAdditionalData loanAdditionalData = this.fromJsonCommand(command);
+                    final String caseId = loanAdditionalData.getCaseId();
+                    final Client loanClient = newLoanApplication.getClient();
+                    final LoanAdditionProperties loanAdditionProperties = loanAdditionalData.toEntity();
+                    loanAdditionProperties.setCaseId(caseId);
+                    loanAdditionProperties.setClient(loanClient);
+                    loanAdditionProperties.setLoan(newLoanApplication);
+                    loanAdditionalPropertiesRepository.saveAndFlush(loanAdditionProperties);
+                }
+            }
+
             if (command.parameterExists(LoanApiConstants.datatables)) {
                 this.entityDatatableChecksWritePlatformService.saveDatatables(StatusEnum.CREATE.getCode().longValue(),
                         EntityTables.LOAN.getName(), newLoanApplication.getId(), newLoanApplication.productId(),
@@ -643,6 +762,51 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
             handleDataIntegrityIssues(command, throwable, dve);
             return CommandProcessingResult.empty();
+        }
+    }
+
+    private void addExternalLoans(GroupLoanAdditionals groupLoanAdditionals, JsonCommand command) {
+        JsonArray externalLoansArray = command.arrayOfParameterNamed(LoanApiConstants.externalLoansParamName);
+
+        List<AdditionalsExtraLoans> additionalLoansList = new ArrayList<>();
+        if (!ObjectUtils.isEmpty(externalLoansArray)) {
+            for (JsonElement element : externalLoansArray) {
+                JsonObject loanData = element.getAsJsonObject();
+
+                String name = null;
+                if (loanData.get("institutionName") != null) {
+                    name = loanData.get("institutionName").getAsString();
+                }
+                Long institutionType = null;
+                if (loanData.get("institutionType") != null) {
+                    institutionType = loanData.get("institutionType").getAsLong();
+                }
+
+                Long loanStatus = null;
+                if (loanData.get("loanStatus") != null) {
+                    loanStatus = loanData.get("loanStatus").getAsLong();
+                }
+
+                BigDecimal totalLoanBalance = null;
+                if (loanData.get("totalLoanBalance") != null) {
+                    totalLoanBalance = new BigDecimal(loanData.get("totalLoanBalance").getAsString().replace(",", "".trim()));
+                }
+
+                BigDecimal charges = null;
+                if (loanData.get("charges") != null) {
+                    charges = new BigDecimal(loanData.get("charges").getAsString().replace(",", "").trim());
+                }
+                BigDecimal totalLoanAmount = null;
+                if (loanData.get("totalLoanAmount") != null) {
+                    totalLoanAmount = new BigDecimal(loanData.get("totalLoanAmount").getAsString().replace(",", "").trim());
+                }
+
+                AdditionalsExtraLoans additionalsExtraLoans = new AdditionalsExtraLoans(groupLoanAdditionals, institutionType,
+                        totalLoanAmount, totalLoanBalance, charges, loanStatus);
+                additionalLoansList.add(additionalsExtraLoans);
+
+            }
+            groupLoanAdditionals.setExtraLoans(additionalLoansList);
         }
     }
 
@@ -811,6 +975,20 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                         .orElseThrow(() -> new LoanProductNotFoundException(productId));
             }
 
+            final String prequalificationIdParameterName = "prequalificationId";
+            PrequalificationGroup prequalificationGroup = existingLoanApplication.getPrequalificationGroup();
+            final Long existingPrequalificationId = existingLoanApplication.getPrequalificationGroup() != null
+                    ? existingLoanApplication.getPrequalificationGroup().getId()
+                    : null;
+            if (command.isChangeInLongParameterNamed(prequalificationIdParameterName, existingPrequalificationId)) {
+                final Long prequalificationId = command.longValueOfParameterNamed(prequalificationIdParameterName);
+                prequalificationGroup = this.prequalificationGroupRepositoryWrapper.findOneWithNotFoundDetection(prequalificationId);
+            }
+            if (prequalificationGroup == null) {
+                throw new PrequalificationNotProvidedException();
+            }
+            existingLoanApplication.setPrequalificationGroup(prequalificationGroup);
+
             LoanProduct loanProductForValidations = newLoanProduct == null ? existingLoanApplication.loanProduct() : newLoanProduct;
 
             this.fromApiJsonDeserializer.validateForModify(command.json(), loanProductForValidations, existingLoanApplication);
@@ -829,8 +1007,11 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             /**
              * Stores all charges which are passed in during modify loan application
              **/
+            // TODO: FBR-369 we need the expected disbursement date and first repayment date. This is hack to get hose
+            // but should be considered for improvement
+            final LoanApplicationTerms loanApplicationTermsCharges = this.loanScheduleAssembler.assembleLoanTerms(command.parsedJson());
             final Set<LoanCharge> possiblyModifedLoanCharges = this.loanChargeAssembler.fromParsedJson(command.parsedJson(),
-                    disbursementDetails);
+                    disbursementDetails, loanApplicationTermsCharges);
             /** Boolean determines if any charge has been modified **/
             boolean isChargeModified = false;
 
@@ -1293,6 +1474,29 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                 officeSpecificLoanProductValidation(existingLoanApplication.getLoanProduct().getId(), OfficeId);
             }
 
+            if (prequalificationGroup.isPrequalificationTypeIndividual()) {
+                final JsonElement loanAdditionalDataJson = command.jsonElement(LoanApiConstants.LOAN_ADDITIONAL_DATA);
+                if (loanAdditionalDataJson != null && loanAdditionalDataJson.isJsonObject()) {
+                    this.fromApiJsonDeserializer.validateLoanAdditionalData(command);
+                    final LoanAdditionalData loanAdditionalData = this.fromJsonCommand(command);
+                    final String caseId = loanAdditionalData.getCaseId();
+                    final Client loanClient = existingLoanApplication.getClient();
+                    final List<LoanAdditionProperties> additionalList = this.loanAdditionalPropertiesRepository
+                            .findByClientIdAndLoanId(loanClient.getId(), existingLoanApplication.getId());
+                    LoanAdditionProperties loanAdditionEntity;
+                    if (!CollectionUtils.isEmpty(additionalList)) {
+                        loanAdditionEntity = additionalList.get(0);
+                        BeanUtils.copyProperties(loanAdditionalData, loanAdditionEntity);
+                    } else {
+                        loanAdditionEntity = loanAdditionalData.toEntity();
+                    }
+                    loanAdditionEntity.setCaseId(caseId);
+                    loanAdditionEntity.setClient(loanClient);
+                    loanAdditionEntity.setLoan(existingLoanApplication);
+                    loanAdditionalPropertiesRepository.saveAndFlush(loanAdditionEntity);
+                }
+            }
+
             // updating loan interest recalculation details throwing null
             // pointer exception after saveAndFlush
             // http://stackoverflow.com/questions/17151757/hibernate-cascade-update-gives-null-pointer/17334374#17334374
@@ -1322,6 +1526,408 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             handleDataIntegrityIssues(command, throwable, dve);
             return CommandProcessingResult.empty();
         }
+    }
+
+    public LoanAdditionalData fromJsonCommand(final JsonCommand jsonCommand) {
+        final LoanAdditionalData.LoanAdditionalDataBuilder loanAdditionalDataBuilder = LoanAdditionalData.builder();
+        final String dateFormat = jsonCommand.dateFormat();
+        final String localeAsString = jsonCommand.locale();
+        final Locale locale = JsonParserHelper.localeFromString(localeAsString);
+        this.fromApiJsonDeserializer.validateLoanAdditionalData(jsonCommand);
+        final JsonElement jsonElement = jsonCommand.jsonElement(LoanApiConstants.LOAN_ADDITIONAL_DATA);
+        final String caseId = this.fromJsonHelper.extractStringNamed("caseId", jsonElement);
+        loanAdditionalDataBuilder.caseId(caseId);
+
+        final Integer ciclosCancelados = this.fromJsonHelper.extractIntegerNamed("ciclosCancelados", jsonElement, locale);
+        loanAdditionalDataBuilder.ciclosCancelados(ciclosCancelados);
+
+        final Long branchCode = this.fromJsonHelper.extractLongNamed("branchCode", jsonElement);
+        loanAdditionalDataBuilder.branchCode(branchCode);
+
+        final String cargoTesorera = this.fromJsonHelper.extractStringNamed("cargoTesorera", jsonElement);
+        loanAdditionalDataBuilder.cargoTesorera(cargoTesorera);
+
+        final String cargo = this.fromJsonHelper.extractStringNamed("cargo", jsonElement);
+        loanAdditionalDataBuilder.cargo(cargo);
+
+        final String estadoSolicitud = this.fromJsonHelper.extractStringNamed("estadoSolicitud", jsonElement);
+        loanAdditionalDataBuilder.estadoSolicitud(estadoSolicitud);
+
+        final LocalDate fechaInicio = this.fromJsonHelper.extractLocalDateNamed("fechaInicio", jsonElement, dateFormat, locale);
+        loanAdditionalDataBuilder.fechaInicio(fechaInicio);
+
+        final String producto = this.fromJsonHelper.extractStringNamed("producto", jsonElement);
+        loanAdditionalDataBuilder.producto(producto);
+
+        final LocalDate fechaSolicitud = this.fromJsonHelper.extractLocalDateNamed("fechaSolicitud", jsonElement, dateFormat, locale);
+        loanAdditionalDataBuilder.fechaSolicitud(fechaSolicitud);
+
+        final String codigoCliente = this.fromJsonHelper.extractStringNamed("codigoCliente", jsonElement);
+        loanAdditionalDataBuilder.codigoCliente(codigoCliente);
+
+        final String actividadNegocio = this.fromJsonHelper.extractStringNamed("actividadNegocio", jsonElement);
+        loanAdditionalDataBuilder.actividadNegocio(actividadNegocio);
+
+        final BigDecimal activoCorriente = this.fromJsonHelper.extractBigDecimalNamed("activoCorriente", jsonElement, locale);
+        loanAdditionalDataBuilder.activoCorriente(activoCorriente);
+
+        final BigDecimal activoNocorriente = this.fromJsonHelper.extractBigDecimalNamed("activoNocorriente", jsonElement, locale);
+        loanAdditionalDataBuilder.activoNocorriente(activoNocorriente);
+
+        final BigDecimal alimentacion = this.fromJsonHelper.extractBigDecimalNamed("alimentacion", jsonElement, locale);
+        loanAdditionalDataBuilder.alimentacion(alimentacion);
+
+        final BigDecimal alquilerCliente = this.fromJsonHelper.extractBigDecimalNamed("alquilerCliente", jsonElement, locale);
+        loanAdditionalDataBuilder.alquilerCliente(alquilerCliente);
+
+        final BigDecimal alquilerGasto = this.fromJsonHelper.extractBigDecimalNamed("alquilerGasto", jsonElement, locale);
+        loanAdditionalDataBuilder.alquilerGasto(alquilerGasto);
+
+        final BigDecimal alquilerLocal = this.fromJsonHelper.extractBigDecimalNamed("alquilerLocal", jsonElement, locale);
+        loanAdditionalDataBuilder.alquilerLocal(alquilerLocal);
+
+        final String antiguedadNegocio = this.fromJsonHelper.extractStringNamed("antiguedadNegocio", jsonElement);
+        loanAdditionalDataBuilder.antiguedadNegocio(antiguedadNegocio);
+
+        final String apoyoFamilia = this.fromJsonHelper.extractStringNamed("apoyoFamilia", jsonElement);
+        loanAdditionalDataBuilder.apoyoFamilia(apoyoFamilia);
+
+        final Integer aprobacionesBc = this.fromJsonHelper.extractIntegerNamed("aprobacionesBc", jsonElement, locale);
+        loanAdditionalDataBuilder.aprobacionesBc(aprobacionesBc);
+
+        final String area = this.fromJsonHelper.extractStringNamed("area", jsonElement);
+        loanAdditionalDataBuilder.area(area);
+
+        final Integer bienesInmuebles = this.fromJsonHelper.extractIntegerNamed("bienesInmuebles", jsonElement, locale);
+        loanAdditionalDataBuilder.bienesInmuebles(bienesInmuebles);
+
+        final Integer bienesInmueblesFamiliares = this.fromJsonHelper.extractIntegerNamed("bienesInmueblesFamiliares", jsonElement, locale);
+        loanAdditionalDataBuilder.bienesInmueblesFamiliares(bienesInmueblesFamiliares);
+
+        final String cDpi = this.fromJsonHelper.extractStringNamed("cDpi", jsonElement);
+        loanAdditionalDataBuilder.cDpi(cDpi);
+
+        final Integer cEdad = this.fromJsonHelper.extractIntegerNamed("cEdad", jsonElement, locale);
+        loanAdditionalDataBuilder.cEdad(cEdad);
+
+        final LocalDate cFechaNacimiento = this.fromJsonHelper.extractLocalDateNamed("cFechaNacimiento", jsonElement, dateFormat, locale);
+        loanAdditionalDataBuilder.cFechaNacimiento(cFechaNacimiento);
+
+        final String cOtroNombre = this.fromJsonHelper.extractStringNamed("cOtroNombre", jsonElement);
+        loanAdditionalDataBuilder.cOtroNombre(cOtroNombre);
+
+        final String cPrimerApellido = this.fromJsonHelper.extractStringNamed("cPrimerApellido", jsonElement);
+        loanAdditionalDataBuilder.cPrimerApellido(cPrimerApellido);
+
+        final String cProfesion = this.fromJsonHelper.extractStringNamed("cProfesion", jsonElement);
+        loanAdditionalDataBuilder.cProfesion(cProfesion);
+
+        final String cSegundoApellido = this.fromJsonHelper.extractStringNamed("cSegundoApellido", jsonElement);
+        loanAdditionalDataBuilder.cSegundoApellido(cSegundoApellido);
+
+        final String cSegundoNombre = this.fromJsonHelper.extractStringNamed("cSegundoNombre", jsonElement);
+        loanAdditionalDataBuilder.cSegundoNombre(cSegundoNombre);
+
+        final String cTelefono = this.fromJsonHelper.extractStringNamed("cTelefono", jsonElement);
+        loanAdditionalDataBuilder.cTelefono(cTelefono);
+
+        final String cPrimerNombre = this.fromJsonHelper.extractStringNamed("cPrimerNombre", jsonElement);
+        loanAdditionalDataBuilder.cPrimerNombre(cPrimerNombre);
+
+        final BigDecimal capacidadPago = this.fromJsonHelper.extractBigDecimalNamed("capacidadPago", jsonElement, locale);
+        loanAdditionalDataBuilder.capacidadPago(capacidadPago);
+
+        final BigDecimal comunalVigente = this.fromJsonHelper.extractBigDecimalNamed("comunalVigente", jsonElement, locale);
+        loanAdditionalDataBuilder.comunalVigente(comunalVigente);
+
+        final BigDecimal costoUnitario = this.fromJsonHelper.extractBigDecimalNamed("costoUnitario", jsonElement, locale);
+        loanAdditionalDataBuilder.costoUnitario(costoUnitario);
+
+        final BigDecimal costoVenta = this.fromJsonHelper.extractBigDecimalNamed("costoVenta", jsonElement, locale);
+        loanAdditionalDataBuilder.costoVenta(costoVenta);
+
+        final BigDecimal cuantoPagar = this.fromJsonHelper.extractBigDecimalNamed("cuantoPagar", jsonElement, locale);
+        loanAdditionalDataBuilder.cuantoPagar(cuantoPagar);
+
+        final BigDecimal cuentasPorPagar = this.fromJsonHelper.extractBigDecimalNamed("cuentasPorPagar", jsonElement, locale);
+        loanAdditionalDataBuilder.cuentasPorPagar(cuentasPorPagar);
+
+        final Integer cuota = this.fromJsonHelper.extractIntegerNamed("cuota", jsonElement, locale);
+        loanAdditionalDataBuilder.cuota(cuota);
+
+        final Integer cuotaOtros = this.fromJsonHelper.extractIntegerNamed("cuotaOtros", jsonElement, locale);
+        loanAdditionalDataBuilder.cuotaOtros(cuotaOtros);
+
+        final Integer cuotaPuente = this.fromJsonHelper.extractIntegerNamed("cuotaPuente", jsonElement, locale);
+        loanAdditionalDataBuilder.cuotaPuente(cuotaPuente);
+
+        final Integer cuotasPendientesBc = this.fromJsonHelper.extractIntegerNamed("cuotasPendientesBc", jsonElement, locale);
+        loanAdditionalDataBuilder.cuotasPendientesBc(cuotasPendientesBc);
+
+        final Integer dependientes = this.fromJsonHelper.extractIntegerNamed("dependientes", jsonElement, locale);
+        loanAdditionalDataBuilder.dependientes(dependientes);
+
+        final String destinoPrestamo = this.fromJsonHelper.extractStringNamed("destinoPrestamo", jsonElement);
+        loanAdditionalDataBuilder.destinoPrestamo(destinoPrestamo);
+
+        final Integer educacion = this.fromJsonHelper.extractIntegerNamed("educacion", jsonElement, locale);
+        loanAdditionalDataBuilder.educacion(educacion);
+
+        final BigDecimal efectivo = this.fromJsonHelper.extractBigDecimalNamed("efectivo", jsonElement, locale);
+        loanAdditionalDataBuilder.efectivo(efectivo);
+
+        final BigDecimal endeudamientoActual = this.fromJsonHelper.extractBigDecimalNamed("endeudamientoActual", jsonElement, locale);
+        loanAdditionalDataBuilder.endeudamientoActual(endeudamientoActual);
+
+        final Integer enf = this.fromJsonHelper.extractIntegerNamed("enf", jsonElement, locale);
+        loanAdditionalDataBuilder.enf(enf);
+
+        final String escribe = this.fromJsonHelper.extractStringNamed("escribe", jsonElement);
+        loanAdditionalDataBuilder.escribe(escribe);
+
+        final String evolucionNegocio = this.fromJsonHelper.extractStringNamed("evolucionNegocio", jsonElement);
+        loanAdditionalDataBuilder.evolucionNegocio(evolucionNegocio);
+
+        final String fPep = this.fromJsonHelper.extractStringNamed("fPep", jsonElement);
+        loanAdditionalDataBuilder.fPep(fPep);
+
+        final Integer familiares = this.fromJsonHelper.extractIntegerNamed("familiares", jsonElement, locale);
+        loanAdditionalDataBuilder.familiares(familiares);
+
+        final LocalDate fechaPrimeraReunion = this.fromJsonHelper.extractLocalDateNamed("fechaPrimeraReunion", jsonElement, dateFormat,
+                locale);
+        loanAdditionalDataBuilder.fechaPrimeraReunion(fechaPrimeraReunion);
+
+        final Integer flujoDisponible = this.fromJsonHelper.extractIntegerNamed("flujoDisponible", jsonElement, locale);
+        loanAdditionalDataBuilder.flujoDisponible(flujoDisponible);
+
+        final String garantiaPrestamo = this.fromJsonHelper.extractStringNamed("garantiaPrestamo", jsonElement);
+        loanAdditionalDataBuilder.garantiaPrestamo(garantiaPrestamo);
+
+        final BigDecimal gastosFamiliares = this.fromJsonHelper.extractBigDecimalNamed("gastosFamiliares", jsonElement, locale);
+        loanAdditionalDataBuilder.gastosFamiliares(gastosFamiliares);
+
+        final BigDecimal gastosNegocio = this.fromJsonHelper.extractBigDecimalNamed("gastosNegocio", jsonElement, locale);
+        loanAdditionalDataBuilder.gastosNegocio(gastosNegocio);
+
+        final Integer herramientas = this.fromJsonHelper.extractIntegerNamed("herramientas", jsonElement, locale);
+        loanAdditionalDataBuilder.herramientas(herramientas);
+
+        final Integer hijos = this.fromJsonHelper.extractIntegerNamed("hijos", jsonElement, locale);
+        loanAdditionalDataBuilder.hijos(hijos);
+
+        final Integer mortgages = this.fromJsonHelper.extractIntegerNamed("mortgages", jsonElement, locale);
+        loanAdditionalDataBuilder.mortgages(mortgages);
+
+        final Integer impuestos = this.fromJsonHelper.extractIntegerNamed("impuestos", jsonElement, locale);
+        loanAdditionalDataBuilder.impuestos(impuestos);
+
+        final String ingresadoPor = this.fromJsonHelper.extractStringNamed("ingresadoPor", jsonElement);
+        loanAdditionalDataBuilder.ingresadoPor(ingresadoPor);
+
+        final BigDecimal ingresoFamiliar = this.fromJsonHelper.extractBigDecimalNamed("ingresoFamiliar", jsonElement, locale);
+        loanAdditionalDataBuilder.ingresoFamiliar(ingresoFamiliar);
+
+        final Integer integrantesAdicional = this.fromJsonHelper.extractIntegerNamed("integrantesAdicional", jsonElement, locale);
+        loanAdditionalDataBuilder.integrantesAdicional(integrantesAdicional);
+
+        final BigDecimal inventarios = this.fromJsonHelper.extractBigDecimalNamed("inventarios", jsonElement, locale);
+        loanAdditionalDataBuilder.inventarios(inventarios);
+
+        final BigDecimal inversionTotal = this.fromJsonHelper.extractBigDecimalNamed("inversionTotal", jsonElement, locale);
+        loanAdditionalDataBuilder.inversionTotal(inversionTotal);
+
+        final String invertir = this.fromJsonHelper.extractStringNamed("invertir", jsonElement);
+        loanAdditionalDataBuilder.invertir(invertir);
+
+        final String lee = this.fromJsonHelper.extractStringNamed("lee", jsonElement);
+        loanAdditionalDataBuilder.lee(lee);
+
+        final BigDecimal menajeDelHogar = this.fromJsonHelper.extractBigDecimalNamed("menajeDelHogar", jsonElement, locale);
+        loanAdditionalDataBuilder.menajeDelHogar(menajeDelHogar);
+
+        final BigDecimal mobiliarioYequipo = this.fromJsonHelper.extractBigDecimalNamed("mobiliarioYequipo", jsonElement, locale);
+        loanAdditionalDataBuilder.mobiliarioYequipo(mobiliarioYequipo);
+
+        final BigDecimal montoSolicitado = this.fromJsonHelper.extractBigDecimalNamed("montoSolicitado", jsonElement, locale);
+        loanAdditionalDataBuilder.montoSolicitado(montoSolicitado);
+
+        final String motivoSolicitud = this.fromJsonHelper.extractStringNamed("motivoSolicitud", jsonElement);
+        loanAdditionalDataBuilder.motivoSolicitud(motivoSolicitud);
+
+        final String nit = this.fromJsonHelper.extractStringNamed("nit", jsonElement);
+        loanAdditionalDataBuilder.nit(nit);
+
+        final String nombrePropio = this.fromJsonHelper.extractStringNamed("nombrePropio", jsonElement);
+        loanAdditionalDataBuilder.nombrePropio(nombrePropio);
+
+        final BigDecimal pasivoCorriente = this.fromJsonHelper.extractBigDecimalNamed("pasivoCorriente", jsonElement, locale);
+        loanAdditionalDataBuilder.pasivoCorriente(pasivoCorriente);
+
+        final BigDecimal pasivoNoCorriente = this.fromJsonHelper.extractBigDecimalNamed("pasivoNoCorriente", jsonElement, locale);
+        loanAdditionalDataBuilder.pasivoNoCorriente(pasivoNoCorriente);
+
+        final BigDecimal pensiones = this.fromJsonHelper.extractBigDecimalNamed("pensiones", jsonElement, locale);
+        loanAdditionalDataBuilder.pensiones(pensiones);
+
+        final String pep = this.fromJsonHelper.extractStringNamed("pep", jsonElement);
+        loanAdditionalDataBuilder.pep(pep);
+
+        final Integer plazo = this.fromJsonHelper.extractIntegerNamed("plazo", jsonElement, locale);
+        loanAdditionalDataBuilder.plazo(plazo);
+
+        final Integer plazoVigente = this.fromJsonHelper.extractIntegerNamed("plazoVigente", jsonElement, locale);
+        loanAdditionalDataBuilder.plazoVigente(plazoVigente);
+
+        final String poseeCuenta = this.fromJsonHelper.extractStringNamed("poseeCuenta", jsonElement);
+        loanAdditionalDataBuilder.poseeCuenta(poseeCuenta);
+
+        final Long prestamoPuente = this.fromJsonHelper.extractLongNamed("prestamoPuente", jsonElement);
+        loanAdditionalDataBuilder.prestamoPuente(prestamoPuente);
+
+        final BigDecimal propuestaFacilitador = this.fromJsonHelper.extractBigDecimalNamed("propuestaFacilitador", jsonElement, locale);
+        loanAdditionalDataBuilder.propuestaFacilitador(propuestaFacilitador);
+
+        final String puntoReunion = this.fromJsonHelper.extractStringNamed("puntoReunion", jsonElement);
+        loanAdditionalDataBuilder.puntoReunion(puntoReunion);
+
+        final BigDecimal relacionGastos = this.fromJsonHelper.extractBigDecimalNamed("relacionGastos", jsonElement, locale);
+        loanAdditionalDataBuilder.relacionGastos(relacionGastos);
+
+        final BigDecimal rentabilidadNeta = this.fromJsonHelper.extractBigDecimalNamed("rentabilidadNeta", jsonElement, locale);
+        loanAdditionalDataBuilder.rentabilidadNeta(rentabilidadNeta);
+
+        final BigDecimal rotacionInventario = this.fromJsonHelper.extractBigDecimalNamed("rotacionInventario", jsonElement, locale);
+        loanAdditionalDataBuilder.rotacionInventario(rotacionInventario);
+
+        final BigDecimal salarioCliente = this.fromJsonHelper.extractBigDecimalNamed("salarioCliente", jsonElement, locale);
+        loanAdditionalDataBuilder.salarioCliente(salarioCliente);
+
+        final BigDecimal salarios = this.fromJsonHelper.extractBigDecimalNamed("salarios", jsonElement, locale);
+        loanAdditionalDataBuilder.salarios(salarios);
+
+        final String salud = this.fromJsonHelper.extractStringNamed("salud", jsonElement);
+        loanAdditionalDataBuilder.salud(salud);
+
+        final String servicios = this.fromJsonHelper.extractStringNamed("servicios", jsonElement);
+        loanAdditionalDataBuilder.servicios(servicios);
+
+        final BigDecimal serviciosBasicos = this.fromJsonHelper.extractBigDecimalNamed("serviciosBasicos", jsonElement, locale);
+        loanAdditionalDataBuilder.serviciosBasicos(serviciosBasicos);
+
+        final BigDecimal serviciosGasto = this.fromJsonHelper.extractBigDecimalNamed("serviciosGasto", jsonElement, locale);
+        loanAdditionalDataBuilder.serviciosGasto(serviciosGasto);
+
+        final BigDecimal serviciosMedicos = this.fromJsonHelper.extractBigDecimalNamed("serviciosMedicos", jsonElement, locale);
+        loanAdditionalDataBuilder.serviciosMedicos(serviciosMedicos);
+
+        final Integer tarjetas = this.fromJsonHelper.extractIntegerNamed("tarjetas", jsonElement, locale);
+        loanAdditionalDataBuilder.tarjetas(tarjetas);
+
+        final String tipoVivienda = this.fromJsonHelper.extractStringNamed("tipoVivienda", jsonElement);
+        loanAdditionalDataBuilder.tipoVivienda(tipoVivienda);
+
+        final BigDecimal totalActivo = this.fromJsonHelper.extractBigDecimalNamed("totalActivo", jsonElement, locale);
+        loanAdditionalDataBuilder.totalActivo(totalActivo);
+
+        final BigDecimal totalIngresos = this.fromJsonHelper.extractBigDecimalNamed("totalIngresos", jsonElement, locale);
+        loanAdditionalDataBuilder.totalIngresos(totalIngresos);
+
+        final BigDecimal totalIngresosFamiliares = this.fromJsonHelper.extractBigDecimalNamed("totalIngresosFamiliares", jsonElement,
+                locale);
+        loanAdditionalDataBuilder.totalIngresosFamiliares(totalIngresosFamiliares);
+
+        final BigDecimal totalPasivo = this.fromJsonHelper.extractBigDecimalNamed("totalPasivo", jsonElement, locale);
+        loanAdditionalDataBuilder.totalPasivo(totalPasivo);
+
+        final BigDecimal transporteGasto = this.fromJsonHelper.extractBigDecimalNamed("transporteGasto", jsonElement, locale);
+        loanAdditionalDataBuilder.transporteGasto(transporteGasto);
+
+        final BigDecimal transporteNegocio = this.fromJsonHelper.extractBigDecimalNamed("transporteNegocio", jsonElement, locale);
+        loanAdditionalDataBuilder.transporteNegocio(transporteNegocio);
+
+        final String ubicacionCliente = this.fromJsonHelper.extractStringNamed("ubicacionCliente", jsonElement);
+        loanAdditionalDataBuilder.ubicacionCliente(ubicacionCliente);
+
+        final String ubicacionNegocio = this.fromJsonHelper.extractStringNamed("ubicacionNegocio", jsonElement);
+        loanAdditionalDataBuilder.ubicacionNegocio(ubicacionNegocio);
+
+        final BigDecimal utilidadBruta = this.fromJsonHelper.extractBigDecimalNamed("utilidadBruta", jsonElement, locale);
+        loanAdditionalDataBuilder.utilidadBruta(utilidadBruta);
+
+        final BigDecimal utilidadNeta = this.fromJsonHelper.extractBigDecimalNamed("utilidadNeta", jsonElement, locale);
+        loanAdditionalDataBuilder.utilidadNeta(utilidadNeta);
+
+        final Integer validFiador = this.fromJsonHelper.extractIntegerNamed("validFiador", jsonElement, locale);
+        loanAdditionalDataBuilder.validFiador(validFiador);
+
+        final BigDecimal valorGarantia = this.fromJsonHelper.extractBigDecimalNamed("valorGarantia", jsonElement, locale);
+        loanAdditionalDataBuilder.valorGarantia(valorGarantia);
+
+        final Integer vehiculos = this.fromJsonHelper.extractIntegerNamed("vehiculos", jsonElement, locale);
+        loanAdditionalDataBuilder.vehiculos(vehiculos);
+
+        final BigDecimal vestimenta = this.fromJsonHelper.extractBigDecimalNamed("vestimenta", jsonElement, locale);
+        loanAdditionalDataBuilder.vestimenta(vestimenta);
+
+        final String visitoNegocio = this.fromJsonHelper.extractStringNamed("visitoNegocio", jsonElement);
+        loanAdditionalDataBuilder.visitoNegocio(visitoNegocio);
+
+        final String externalId = this.fromJsonHelper.extractStringNamed("externalId", jsonElement);
+        loanAdditionalDataBuilder.externalId(externalId);
+
+        final String ownerId = this.fromJsonHelper.extractStringNamed("ownerId", jsonElement);
+        loanAdditionalDataBuilder.ownerId(ownerId);
+
+        final String caseName = this.fromJsonHelper.extractStringNamed("caseName", jsonElement);
+        loanAdditionalDataBuilder.caseName(caseName);
+
+        final LocalDate fechaFin = this.fromJsonHelper.extractLocalDateNamed("fechaFin", jsonElement, dateFormat, locale);
+        loanAdditionalDataBuilder.fechaFin(fechaFin);
+
+        final BigDecimal ventas = this.fromJsonHelper.extractBigDecimalNamed("ventas", jsonElement, locale);
+        loanAdditionalDataBuilder.ventas(ventas);
+
+        final String excepcion = this.fromJsonHelper.extractStringNamed("excepcion", jsonElement);
+        loanAdditionalDataBuilder.excepcion(excepcion);
+
+        final BigDecimal cuentasPorCobrar = this.fromJsonHelper.extractBigDecimalNamed("cuentasPorCobrar", jsonElement, locale);
+        loanAdditionalDataBuilder.cuentasPorCobrar(cuentasPorCobrar);
+
+        final String descripcionExcepcion = this.fromJsonHelper.extractStringNamed("descripcionExcepcion", jsonElement);
+        loanAdditionalDataBuilder.descripcionExcepcion(descripcionExcepcion);
+
+        final BigDecimal endeudamientoFuturo = this.fromJsonHelper.extractBigDecimalNamed("endeudamientoFuturo", jsonElement, locale);
+        loanAdditionalDataBuilder.endeudamientoFuturo(endeudamientoFuturo);
+
+        final BigDecimal hipotecas = this.fromJsonHelper.extractBigDecimalNamed("hipotecas", jsonElement, locale);
+        loanAdditionalDataBuilder.hipotecas(hipotecas);
+
+        final Integer tipoExcepcion = this.fromJsonHelper.extractIntegerNamed("tipoExcepcion", jsonElement, locale);
+        loanAdditionalDataBuilder.tipoExcepcion(tipoExcepcion);
+
+        final BigDecimal montoAutorizado = this.fromJsonHelper.extractBigDecimalNamed("montoAutorizado", jsonElement, locale);
+        loanAdditionalDataBuilder.montoAutorizado(montoAutorizado);
+
+        final String observaciones = this.fromJsonHelper.extractStringNamed("observaciones", jsonElement);
+        loanAdditionalDataBuilder.observaciones(observaciones);
+
+        final BigDecimal capitalDdeTrabajo = this.fromJsonHelper.extractBigDecimalNamed("capitalDdeTrabajo", jsonElement, locale);
+        loanAdditionalDataBuilder.capitalDdeTrabajo(capitalDdeTrabajo);
+
+        final BigDecimal montoOtrosIngresos = this.fromJsonHelper.extractBigDecimalNamed("montoOtrosIngresos", jsonElement, locale);
+        loanAdditionalDataBuilder.montoOtrosIngresos(montoOtrosIngresos);
+
+        final String origenOtrosIngresos = this.fromJsonHelper.extractStringNamed("origenOtrosIngresos", jsonElement);
+        loanAdditionalDataBuilder.origenOtrosIngresos(origenOtrosIngresos);
+
+        final String otrosIngresos = this.fromJsonHelper.extractStringNamed("otrosIngresos", jsonElement);
+        loanAdditionalDataBuilder.otrosIngresos(otrosIngresos);
+
+        final BigDecimal relacionOtrosIngresos = this.fromJsonHelper.extractBigDecimalNamed("relacionOtrosIngresos", jsonElement, locale);
+        loanAdditionalDataBuilder.relacionOtrosIngresos(relacionOtrosIngresos);
+
+        return loanAdditionalDataBuilder.build();
     }
 
     /*
@@ -1853,4 +2459,67 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
         }
     }
 
+    @Transactional
+    @Override
+    public CommandProcessingResult disburseLoanByCheques(JsonCommand command) {
+        final AppUser currentUser = this.context.authenticatedUser();
+        List<DisburseByChequesCommand> disburseByChequesCommands = this.disburseByChequesCommandFromApiJsonDeserializer
+                .commandFromApiJson(command.json());
+        for (final DisburseByChequesCommand disburseByChequesCommand : disburseByChequesCommands) {
+            final Loan loanAccount = this.loanRepositoryWrapper.findOneWithNotFoundDetection(disburseByChequesCommand.getLoanId());
+            final Cheque cheque = this.chequeBatchRepositoryWrapper
+                    .findOneChequeWithNotFoundDetection(disburseByChequesCommand.getChequeId());
+            loanAccount.setCheque(cheque);
+            loanAccount.setLoanStatus(LoanStatus.DISBURSE_AUTHORIZATION_PENDING.getValue());
+            cheque.setStatus(BankChequeStatus.PENDING_ISSUANCE.getValue());
+            cheque.setDescription(disburseByChequesCommand.getDescription());
+            cheque.setGuaranteeAmount(disburseByChequesCommand.getActualGuaranteeAmount());
+            cheque.setRequiredGuaranteeAmount(disburseByChequesCommand.getRequiredGuaranteeAmount());
+            cheque.setDepositGuaranteeNo(disburseByChequesCommand.getDepositGuaranteeNo());
+            final LocalDateTime localDateTime = DateUtils.getLocalDateTimeOfSystem();
+            LocalDate localDate = DateUtils.getBusinessLocalDate();
+            final Long currentUserId = currentUser.getId();
+            cheque.stampAudit(currentUserId, localDateTime);
+            loanAccount.setDisbursedByChequeDate(localDate);
+            loanAccount.setDisbursedByChequeAppUser(currentUser);
+
+            this.loanRepositoryWrapper.saveAndFlush(loanAccount);
+            this.chequeBatchRepositoryWrapper.updateCheque(cheque);
+
+            // TODO: FBR-47 Handle deposit to guarantee savings account here
+            BigDecimal depositAmount = cheque.getGuaranteeAmount().subtract(cheque.getRequiredGuaranteeAmount());
+            if (depositAmount != null && depositAmount.compareTo(BigDecimal.ZERO) < 0) {
+                CommandProcessingResult depositCommandResult = this.savingsAccountWritePlatformService
+                        .depositAndHoldToClientGuaranteeAccount(depositAmount.abs(), cheque.getRequiredGuaranteeAmount(),
+                                loanAccount.getClientId(), loanAccount.getId(), localDate);
+            }
+        }
+        return new CommandProcessingResultBuilder().withCommandId(command.commandId()).build();
+    }
+
+    @Override
+    public CommandProcessingResult editLoanFund(final JsonCommand command) {
+        final Long loanId = command.getLoanId();
+        final Loan existingLoanApplication = retrieveLoanBy(loanId);
+        if (existingLoanApplication.isClosed()) {
+            throw new LoanApplicationNotInClosedStateCannotBeModified(loanId);
+        }
+        final String fundIdParameterName = "fundId";
+        final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("loan");
+        if (command.parameterExists(fundIdParameterName)) {
+            final Long fundId = command.longValueOfParameterNamed(fundIdParameterName);
+            baseDataValidator.reset().parameter(fundIdParameterName).value(fundId).ignoreIfNull().integerGreaterThanZero();
+            final Fund fund = this.loanAssembler.findFundByIdIfProvided(fundId);
+            existingLoanApplication.updateFund(fund);
+        }
+        if (!dataValidationErrors.isEmpty()) {
+            throw new PlatformApiDataValidationException("validation.msg.validation.errors.exist", "Validation errors exist.",
+                    dataValidationErrors);
+        }
+        this.loanRepositoryWrapper.saveAndFlush(existingLoanApplication);
+        return new CommandProcessingResultBuilder().withEntityId(loanId).withOfficeId(existingLoanApplication.getOfficeId())
+                .withClientId(existingLoanApplication.getClientId()).withGroupId(existingLoanApplication.getGroupId())
+                .withLoanId(existingLoanApplication.getId()).build();
+    }
 }
