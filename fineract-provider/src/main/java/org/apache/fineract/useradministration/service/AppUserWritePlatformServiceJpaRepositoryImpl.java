@@ -59,7 +59,6 @@ import org.apache.fineract.useradministration.domain.Role;
 import org.apache.fineract.useradministration.domain.RoleRepository;
 import org.apache.fineract.useradministration.domain.UserDomainService;
 import org.apache.fineract.useradministration.exception.PasswordPreviouslyUsedException;
-import org.apache.fineract.useradministration.exception.ProhibitPasswordReuseGlobalConfigurationException;
 import org.apache.fineract.useradministration.exception.RoleNotFoundException;
 import org.apache.fineract.useradministration.exception.UserNotFoundException;
 import org.springframework.cache.annotation.CacheEvict;
@@ -244,23 +243,22 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
         String originalPassword = command.stringValueOfParameterNamed("password");
 
         AppUserPreviousPassword currentPasswordToSaveAsPreview = null;
-        Integer numberOfPreviousPasswords = AppUserApiConstant.numberOfPreviousPasswords;
+        Integer numberOfPreviousPasswords;
 
         GlobalConfigurationPropertyData restrictReuseOfPasswordConfig = configurationReadPlatformService
                 .retrieveGlobalConfiguration(AppUserApiConstant.RESTRICT_RE_USE_OF_PASSWORD);
 
-        if (!restrictReuseOfPasswordConfig.isEnabled()) {
-            throw new ProhibitPasswordReuseGlobalConfigurationException();
-        }
         if (restrictReuseOfPasswordConfig.isEnabled() && restrictReuseOfPasswordConfig.getValue() > 0) {
             numberOfPreviousPasswords = restrictReuseOfPasswordConfig.getValue().intValue();
+        } else {
+            return new AppUserPreviousPassword(user);
         }
 
         if (passWordEncodedValue != null) {
             PageRequest pageRequest = PageRequest.of(0, numberOfPreviousPasswords, Sort.Direction.DESC, "id");
             final List<AppUserPreviousPassword> nLastUsedPasswords = this.appUserPreviewPasswordRepository.findByUserId(user.getId(),
                     pageRequest);
-            // validate current password before saving it as preview
+            // validate current password before saving it as previous
             validatePasswordShouldNotBeReused(originalPassword, user.getPassword());
             for (AppUserPreviousPassword aPreviewPassword : nLastUsedPasswords) {
                 if (aPreviewPassword.getPassword().equals(passWordEncodedValue)) {

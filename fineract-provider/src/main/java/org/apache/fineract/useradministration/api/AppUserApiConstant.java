@@ -24,7 +24,6 @@ public final class AppUserApiConstant {
 
     }
 
-    public static final int numberOfPreviousPasswords = 1000000;
     public static final String RESTRICT_RE_USE_OF_PASSWORD = "Restrict-re-use-of-password";
 
 }

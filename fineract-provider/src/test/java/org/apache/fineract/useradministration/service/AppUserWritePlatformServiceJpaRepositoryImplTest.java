@@ -93,11 +93,11 @@ public class AppUserWritePlatformServiceJpaRepositoryImplTest {
             when(configurationReadPlatformService.retrieveGlobalConfiguration("Restrict-re-use-of-password")).thenReturn(config);
             appUserService.getCurrentPasswordToSaveAsPreview(user, command);
 
-            fail("testThatResetPasswordRequiresGlobalConfigurationEnabledToWork has failed");
-
-        } catch (Exception e) {
             Mockito.verify(appUserPreviewPasswordRepository, Mockito.times(0)).findByUserId(eq(1L), any());
             Mockito.verify(configurationReadPlatformService, Mockito.times(1)).retrieveGlobalConfiguration(Mockito.anyString());
+
+        } catch (Exception e) {
+            fail("testThatResetPasswordRequiresGlobalConfigurationEnabledToWork has failed");
             assertThat(e.getMessage(), CoreMatchers.containsString(
                     "Reset Password is terminated. Please reach-out to your admin to enable [Restrict-re-use-of-password] in global configuration"));
 
