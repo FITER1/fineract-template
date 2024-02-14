@@ -56,7 +56,6 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
             // Apply and Approve Loan
             Long loanId = applyAndApproveLoan(clientId, loanProductId, "01 January 2023", 1000.0, 1,
                     (req) -> req.transactionProcessingStrategyCode(ADVANCED_PAYMENT_ALLOCATION_STRATEGY)
-                            .loanScheduleType(LoanScheduleType.PROGRESSIVE.toString())
                             .loanScheduleProcessingType(LoanScheduleProcessingType.HORIZONTAL.toString()));
             // Disburse Loan
             disburseLoan(loanId, BigDecimal.valueOf(1000.00), "01 January 2023");
@@ -67,8 +66,8 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
 
             // Then verify
             verifyTransactions(loanId, //
-                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
-                    transaction(50, "Waive loan charges", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 50.0) //
+                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
+                    transaction(50, "Waive loan charges", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 50.0, 0.0) //
             );
 
             GetLoansLoanIdResponse loanDetails = loanTransactionHelper.getLoan(requestSpec, responseSpec, loanId.intValue());
@@ -90,7 +89,6 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
             // Apply and Approve Loan
             Long loanId = applyAndApproveLoan(clientId, loanProductId, "01 January 2023", 1000.0, 1,
                     (req) -> req.transactionProcessingStrategyCode(ADVANCED_PAYMENT_ALLOCATION_STRATEGY)
-                            .loanScheduleType(LoanScheduleType.PROGRESSIVE.toString())
                             .loanScheduleProcessingType(LoanScheduleProcessingType.HORIZONTAL.toString()));
             // Disburse Loan
             disburseLoan(loanId, BigDecimal.valueOf(1000.00), "01 January 2023");
@@ -101,8 +99,8 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
 
             // Then verify
             verifyTransactions(loanId, //
-                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
-                    transaction(50, "Waive loan charges", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 50.0) //
+                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
+                    transaction(50, "Waive loan charges", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 50.0, 0.0) //
             );
 
             GetLoansLoanIdResponse loanDetails = loanTransactionHelper.getLoan(requestSpec, responseSpec, loanId.intValue());
@@ -124,7 +122,6 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
             // Apply and Approve Loan
             Long loanId = applyAndApproveLoan(clientId, loanProductId, "01 January 2023", 1000.0, 1,
                     (req) -> req.transactionProcessingStrategyCode(ADVANCED_PAYMENT_ALLOCATION_STRATEGY)
-                            .loanScheduleType(LoanScheduleType.PROGRESSIVE.toString())
                             .loanScheduleProcessingType(LoanScheduleProcessingType.HORIZONTAL.toString())); // Disburse
                                                                                                             // Loan
             disburseLoan(loanId, BigDecimal.valueOf(1000.00), "01 January 2023");
@@ -140,8 +137,8 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
 
             // Then verify
             verifyTransactions(loanId, //
-                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
-                    transaction(50, "Waive loan charges", "05 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 50.0) //
+                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
+                    transaction(50, "Waive loan charges", "05 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 50.0, 0.0) //
             );
 
             GetLoansLoanIdResponse loanDetails = loanTransactionHelper.getLoan(requestSpec, responseSpec, loanId.intValue());
@@ -154,9 +151,9 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
             addRepaymentForLoan(loanId, 200.0, "03 January 2023");
 
             verifyTransactions(loanId, //
-                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
-                    transaction(200, "Repayment", "03 January 2023", 800.0, 200.0, 0.0, 0.0, 0.0, 0.0), //
-                    transaction(50, "Waive loan charges", "05 January 2023", 800.0, 0.0, 0.0, 0.0, 0.0, 50.0) //
+                    transaction(1000, "Disbursement", "01 January 2023", 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
+                    transaction(200, "Repayment", "03 January 2023", 800.0, 200.0, 0.0, 0.0, 0.0, 0.0, 0.0), //
+                    transaction(50, "Waive loan charges", "05 January 2023", 800.0, 0.0, 0.0, 0.0, 0.0, 50.0, 0.0) //
             );
         });
     }
@@ -188,8 +185,7 @@ public class AdvancedPaymentAllocationWaiveLoanCharges extends BaseLoanIntegrati
 
     protected Long createLoanProductWithAdvancedAllocation() {
         PostLoanProductsRequest req = createOnePeriod30DaysLongNoInterestPeriodicAccrualProduct();
-        req.transactionProcessingStrategyCode(ADVANCED_PAYMENT_ALLOCATION_STRATEGY)
-                .loanScheduleType(LoanScheduleType.PROGRESSIVE.toString())
+        req.transactionProcessingStrategyCode(ADVANCED_PAYMENT_ALLOCATION_STRATEGY).loanScheduleType(LoanScheduleType.PROGRESSIVE.name())
                 .loanScheduleProcessingType(LoanScheduleProcessingType.HORIZONTAL.toString());
         req.addPaymentAllocationItem(createDefaultPaymentAllocationWithMixedGrouping());
         PostLoanProductsResponse loanProduct = loanTransactionHelper.createLoanProduct(req);
