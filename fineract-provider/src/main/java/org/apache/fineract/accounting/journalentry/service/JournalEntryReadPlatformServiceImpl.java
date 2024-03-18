@@ -65,10 +65,8 @@ import org.apache.fineract.portfolio.savings.service.SavingsEnumerations;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-@Service
 @RequiredArgsConstructor
 public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlatformService {
 
@@ -203,8 +201,11 @@ public class JournalEntryReadPlatformServiceImpl implements JournalEntryReadPlat
                     noteData = new NoteData(noteId, null, null, null, null, null, null, null, note, null, null, null, null, null, null);
                 }
                 Long transaction = null;
-                if (entityType != null) {
-                    transaction = Long.parseLong(transactionId.substring(1).trim());
+                if (entityType != null && transactionId != null) {
+                    String numericPart = transactionId.replaceAll("[^\\d]", "");
+                    if (!numericPart.isEmpty()) {
+                        transaction = Long.parseLong(numericPart);
+                    }
                 }
 
                 TransactionTypeEnumData transactionTypeEnumData = null;

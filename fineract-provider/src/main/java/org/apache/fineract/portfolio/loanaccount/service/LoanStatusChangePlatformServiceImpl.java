@@ -26,11 +26,9 @@ import org.apache.fineract.infrastructure.event.business.domain.loan.LoanStatusC
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainServiceJpa;
-import org.springframework.stereotype.Service;
 
 @Slf4j
 @RequiredArgsConstructor
-@Service
 public class LoanStatusChangePlatformServiceImpl implements LoanStatusChangePlatformService {
 
     private final BusinessEventNotifierService businessEventNotifierService;
@@ -41,7 +39,7 @@ public class LoanStatusChangePlatformServiceImpl implements LoanStatusChangePlat
         businessEventNotifierService.addPostBusinessEventListener(LoanStatusChangedBusinessEvent.class, new LoanStatusChangedListener());
     }
 
-    private class LoanStatusChangedListener implements BusinessEventListener<LoanStatusChangedBusinessEvent> {
+    private final class LoanStatusChangedListener implements BusinessEventListener<LoanStatusChangedBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanStatusChangedBusinessEvent event) {

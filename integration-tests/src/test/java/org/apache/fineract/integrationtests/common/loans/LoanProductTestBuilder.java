@@ -28,6 +28,8 @@ import java.util.Map;
 import org.apache.fineract.client.models.AdvancedPaymentData;
 import org.apache.fineract.integrationtests.common.Utils;
 import org.apache.fineract.integrationtests.common.accounting.Account;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleProcessingType;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleType;
 
 public class LoanProductTestBuilder {
 
@@ -46,6 +48,7 @@ public class LoanProductTestBuilder {
     public static final String INTEREST_PRINCIPAL_PENALTIES_FEES_ORDER_STRATEGY = "interest-principal-penalties-fees-order-strategy";
     public static final String DUE_PENALTY_FEE_INTEREST_PRINCIPAL_IN_ADVANCE_PRINCIPAL_PENALTY_FEE_INTEREST_STRATEGY = "due-penalty-fee-interest-principal-in-advance-principal-penalty-fee-interest-strategy";
     public static final String DUE_PENALTY_INTEREST_PRINCIPAL_FEE_IN_ADVANCE_PENALTY_INTEREST_PRINCIPAL_FEE_STRATEGY = "due-penalty-interest-principal-fee-in-advance-penalty-interest-principal-fee-strategy";
+    public static final String ADVANCED_PAYMENT_ALLOCATION_STRATEGY = "advanced-payment-allocation-strategy";
 
     // private static final String HEAVENS_FAMILY_STRATEGY ="heavensfamily-strategy";
     // private static final String CREO_CORE_STRATEGY ="creocore-strategy";
@@ -151,6 +154,8 @@ public class LoanProductTestBuilder {
     private boolean enableAutoRepaymentForDownPayment = false;
     private Integer repaymentStartDateType = null;
     private boolean disableScheduleExtensionForDownPayment = false;
+    private String loanScheduleType = LoanScheduleType.CUMULATIVE.name();
+    private String loanScheduleProcessingType = LoanScheduleProcessingType.HORIZONTAL.name();
 
     public String build() {
         final HashMap<String, Object> map = build(null, null);
@@ -198,6 +203,9 @@ public class LoanProductTestBuilder {
         map.put("maxPrincipal", this.maxPrincipal);
         map.put("isEqualAmortization", this.isEqualAmortization);
         map.put("overdueDaysForNPA", this.overdueDaysForNPA);
+        map.put("loanScheduleType", loanScheduleType);
+        map.put("loanScheduleProcessingType", loanScheduleProcessingType);
+
         if (this.minimumDaysBetweenDisbursalAndFirstRepayment != null) {
             map.put("minimumDaysBetweenDisbursalAndFirstRepayment", this.minimumDaysBetweenDisbursalAndFirstRepayment);
         }
@@ -742,4 +750,18 @@ public class LoanProductTestBuilder {
         return this;
     }
 
+    public LoanProductTestBuilder withAllowPartialPeriodInterestCalculation(final Boolean allowPartialPeriodInterestCalcualtion) {
+        this.allowPartialPeriodInterestCalcualtion = allowPartialPeriodInterestCalcualtion;
+        return this;
+    }
+
+    public LoanProductTestBuilder withLoanScheduleType(LoanScheduleType loanScheduleType) {
+        this.loanScheduleType = loanScheduleType.name();
+        return this;
+    }
+
+    public LoanProductTestBuilder withLoanScheduleProcessingType(LoanScheduleProcessingType loanScheduleProcessingType) {
+        this.loanScheduleProcessingType = loanScheduleProcessingType.name();
+        return this;
+    }
 }

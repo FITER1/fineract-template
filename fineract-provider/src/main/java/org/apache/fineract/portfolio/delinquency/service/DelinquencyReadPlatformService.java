@@ -19,9 +19,12 @@
 package org.apache.fineract.portfolio.delinquency.service;
 
 import java.util.Collection;
+import java.util.List;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyBucketData;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyRangeData;
 import org.apache.fineract.portfolio.delinquency.data.LoanDelinquencyTagHistoryData;
+import org.apache.fineract.portfolio.delinquency.data.LoanInstallmentDelinquencyTagData;
+import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyAction;
 import org.apache.fineract.portfolio.loanaccount.data.CollectionData;
 
 public interface DelinquencyReadPlatformService {
@@ -39,5 +42,9 @@ public interface DelinquencyReadPlatformService {
     Collection<LoanDelinquencyTagHistoryData> retrieveDelinquencyRangeHistory(Long loanId);
 
     CollectionData calculateLoanCollectionData(Long loanId);
+
+    Collection<LoanInstallmentDelinquencyTagData> retrieveLoanInstallmentsCurrentDelinquencyTag(Long loanId);
+
+    List<LoanDelinquencyAction> retrieveLoanDelinquencyActions(Long loanId);
 
 }

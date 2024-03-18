@@ -35,7 +35,7 @@ import org.apache.fineract.accounting.closure.serialization.GLClosureCommandFrom
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
-import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
@@ -66,15 +66,14 @@ public class GLClosureWritePlatformServiceJpaRepositoryImpl implements GLClosure
             final Office office = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
             // TODO: Get Tenant specific date
             // ensure closure date is not in the future
-            final LocalDate todaysDate = DateUtils.getBusinessLocalDate();
             final LocalDate closureDate = command.localDateValueOfParameterNamed(GLClosureJsonInputParams.CLOSING_DATE.getValue());
-            if (closureDate.isAfter(todaysDate)) {
+            if (DateUtils.isDateInTheFuture(closureDate)) {
                 throw new GLClosureInvalidException(GlClosureInvalidReason.FUTURE_DATE, closureDate);
             }
             // shouldn't be before an existing accounting closure
             final GLClosure latestGLClosure = this.glClosureRepository.getLatestGLClosureByBranch(officeId);
             if (latestGLClosure != null) {
-                if (latestGLClosure.getClosingDate().isAfter(closureDate)) {
+                if (DateUtils.isAfter(latestGLClosure.getClosingDate(), closureDate)) {
                     throw new GLClosureInvalidException(GlClosureInvalidReason.ACCOUNTING_CLOSED, latestGLClosure.getClosingDate());
                 }
             }
@@ -122,7 +121,7 @@ public class GLClosureWritePlatformServiceJpaRepositoryImpl implements GLClosure
          **/
         final LocalDate closureDate = glClosure.getClosingDate();
         final GLClosure latestGLClosure = this.glClosureRepository.getLatestGLClosureByBranch(glClosure.getOffice().getId());
-        if (latestGLClosure.getClosingDate().isAfter(closureDate)) {
+        if (DateUtils.isAfter(latestGLClosure.getClosingDate(), closureDate)) {
             throw new GLClosureInvalidDeleteException(latestGLClosure.getOffice().getId(), latestGLClosure.getOffice().getName(),
                     latestGLClosure.getClosingDate());
         }
@@ -144,7 +143,7 @@ public class GLClosureWritePlatformServiceJpaRepositoryImpl implements GLClosure
         }
 
         log.error("Error occured.", dve);
-        throw new PlatformDataIntegrityException("error.msg.glClosure.unknown.data.integrity.issue",
+        throw ErrorHandler.getMappable(dve, "error.msg.glClosure.unknown.data.integrity.issue",
                 "Unknown data integrity issue with resource GL Closure: " + realCause.getMessage());
     }
 }

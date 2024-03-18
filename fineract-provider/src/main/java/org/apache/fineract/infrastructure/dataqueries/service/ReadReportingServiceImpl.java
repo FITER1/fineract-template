@@ -37,7 +37,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -45,7 +44,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
-import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.core.service.database.JdbcJavaType;
 import org.apache.fineract.infrastructure.dataqueries.data.GenericResultsetData;
@@ -86,7 +85,7 @@ public class ReadReportingServiceImpl implements ReadReportingService {
                 final GenericResultsetData result = retrieveGenericResultset(name, type, queryParams, isSelfServiceUserReport);
                 generateCsvFileBuffer(result, out);
             } catch (final Exception e) {
-                throw new PlatformDataIntegrityException("error.msg.exception.error", e.getMessage(), e);
+                throw ErrorHandler.getMappable(e);
             }
         };
     }
@@ -133,11 +132,8 @@ public class ReadReportingServiceImpl implements ReadReportingService {
 
         String sql = getSql(name, type);
 
-        final Set<String> keys = queryParams.keySet();
-        for (final String key : keys) {
-            final String pValue = queryParams.get(key);
-            // LOG.info("({} : {})", key, pValue);
-            sql = this.genericDataService.replace(sql, key, pValue);
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            sql = this.genericDataService.replace(sql, entry.getKey(), entry.getValue());
         }
 
         final AppUser currentUser = this.context.authenticatedUser();
@@ -238,14 +234,9 @@ public class ReadReportingServiceImpl implements ReadReportingService {
                 row = element.getRow();
                 rSize = row.size();
                 for (int j = 0; j < rSize; j++) {
-                    currColType = columnHeaders.get(j).getColumnType();
                     currVal = (String) row.get(j);
                     if (currVal != null) {
-                        if (currColType.isNumericType()) {
-                            table.addCell(currVal.toString());
-                        } else {
-                            table.addCell(currVal.toString());
-                        }
+                        table.addCell(currVal);
                     }
                 }
             }
@@ -255,7 +246,7 @@ public class ReadReportingServiceImpl implements ReadReportingService {
             return genaratePdf;
         } catch (final Exception e) {
             log.error("error.msg.reporting.error:", e);
-            throw new PlatformDataIntegrityException("error.msg.exception.error", e.getMessage(), e);
+            throw ErrorHandler.getMappable(e);
         }
     }
 
@@ -453,11 +444,8 @@ public class ReadReportingServiceImpl implements ReadReportingService {
     private String sqlToRunForSmsEmailCampaign(final String name, final String type, final Map<String, String> queryParams) {
         String sql = getSql(name, type);
 
-        final Set<String> keys = queryParams.keySet();
-        for (String key : keys) {
-            final String pValue = queryParams.get(key);
-            key = "${" + key + "}";
-            sql = this.genericDataService.replace(sql, key, pValue);
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            sql = this.genericDataService.replace(sql, "${" + entry.getKey() + "}", entry.getValue());
         }
 
         sql = this.genericDataService.wrapSQL(sql);

@@ -102,7 +102,7 @@ final class LoanProductsApiResourceSwagger {
         @Schema(example = "false")
         public Boolean useBorrowerCycle;
         @Schema(example = "2")
-        public Integer repaymentFrequencyType;
+        public Long repaymentFrequencyType;
         @Schema(example = "2")
         public Integer interestRateFrequencyType;
         @Schema(example = "1")
@@ -152,6 +152,8 @@ final class LoanProductsApiResourceSwagger {
         public Boolean holdGuaranteeFunds;
         @Schema(example = "1")
         public Long delinquencyBucketId;
+        @Schema(example = "false")
+        public Boolean enableInstallmentLevelDelinquency;
         @Schema(example = "3")
         public Integer dueDaysForRepaymentEvent;
         @Schema(example = "3")
@@ -256,6 +258,10 @@ final class LoanProductsApiResourceSwagger {
 
         public AllowAttributeOverrides allowAttributeOverrides;
         public List<RateData> rates;
+        @Schema(example = "CUMULATIVE")
+        public String loanScheduleType;
+        @Schema(example = "HORIZONTAL")
+        public String loanScheduleProcessingType;
 
         static final class AllowAttributeOverrides {
 
@@ -1036,6 +1042,8 @@ final class LoanProductsApiResourceSwagger {
         public List<EnumOptionData> advancedPaymentAllocationTransactionTypes;
         public List<EnumOptionData> advancedPaymentAllocationFutureInstallmentAllocationRules;
         public List<EnumOptionData> advancedPaymentAllocationTypes;
+        public List<EnumOptionData> loanScheduleTypeOptions;
+        public List<EnumOptionData> loanScheduleProcessingTypeOptions;
     }
 
     @Schema(description = "GetLoanProductsProductIdResponse")
@@ -1237,6 +1245,8 @@ final class LoanProductsApiResourceSwagger {
         @Schema(example = "50")
         public Integer principalThresholdForLastInstalment;
         public GetDelinquencyBucketsResponse delinquencyBucket;
+        @Schema(example = "false")
+        public Boolean enableInstallmentLevelDelinquency;
         @Schema(example = "true")
         public Boolean disallowExpectedDisbursements;
         @Schema(example = "3")
@@ -1254,6 +1264,10 @@ final class LoanProductsApiResourceSwagger {
         public GetLoanProductsRepaymentStartDateType repaymentStartDateType;
         @Schema(example = "false")
         public Boolean disableScheduleExtensionForDownPayment;
+        @Schema(example = "CUMULATIVE")
+        public EnumOptionData loanScheduleType;
+        @Schema(example = "HORIZONTAL")
+        public EnumOptionData loanScheduleProcessingType;
     }
 
     @Schema(description = "PutLoanProductsProductIdRequest")
@@ -1347,9 +1361,9 @@ final class LoanProductsApiResourceSwagger {
         @Schema(example = "50")
         public Integer overAppliedNumber;
         @Schema(example = "1")
-        public Integer daysInMonthType;
+        public Long daysInMonthType;
         @Schema(example = "1")
-        public Integer daysInYearType;
+        public Long daysInYearType;
         @Schema(example = "true")
         public Boolean allowPartialPeriodInterestCalcualtion;
         @Schema(example = "179")
@@ -1372,6 +1386,8 @@ final class LoanProductsApiResourceSwagger {
         public Boolean holdGuaranteeFunds;
         @Schema(example = "1")
         public Long delinquencyBucketId;
+        @Schema(example = "false")
+        public Boolean enableInstallmentLevelDelinquency;
         @Schema(example = "3")
         public Integer dueDaysForRepaymentEvent;
         @Schema(example = "3")
@@ -1477,6 +1493,11 @@ final class LoanProductsApiResourceSwagger {
         public String locale;
         @Schema(example = "dd MMMM yyyy")
         public String dateFormat;
+
+        @Schema(example = "HORIZONTAL")
+        public String loanScheduleProcessingType;
+        @Schema(example = "CUMULATIVE")
+        public String loanScheduleType;
 
         public PostLoanProductsRequest.AllowAttributeOverrides allowAttributeOverrides;
         public List<PostLoanProductsRequest.RateData> rates;

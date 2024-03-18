@@ -27,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -67,6 +66,7 @@ import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
@@ -81,11 +81,9 @@ import org.apache.fineract.useradministration.domain.AppUser;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.orm.jpa.JpaSystemException;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-@Service
 @RequiredArgsConstructor
 @Slf4j
 public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements JournalEntryWritePlatformService {
@@ -314,9 +312,7 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
         final LocalDate journalEntriesTransactionDate = journalEntries.get(0).getTransactionDate();
         final GLClosure latestGLClosureByBranch = this.glClosureRepository.getLatestGLClosureByBranch(officeId);
         if (latestGLClosureByBranch != null) {
-            if (latestGLClosureByBranch.getClosingDate().isAfter(journalEntriesTransactionDate)
-                    || latestGLClosureByBranch.getClosingDate().compareTo(journalEntriesTransactionDate) == 0 ? Boolean.TRUE
-                            : Boolean.FALSE) {
+            if (!DateUtils.isBefore(latestGLClosureByBranch.getClosingDate(), journalEntriesTransactionDate)) {
                 final String accountName = null;
                 final String accountGLCode = null;
                 throw new JournalEntryInvalidException(GlJournalEntryInvalidReason.ACCOUNTING_CLOSED,
@@ -404,50 +400,46 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
             }
         }
 
-        Set<OfficeCurrencyKey> officeSet = officeMap.keySet();
         Map<GLAccount, BigDecimal> liabilityMap = new HashMap<>();
         Map<GLAccount, BigDecimal> expenseMap = new HashMap<>();
 
-        for (OfficeCurrencyKey key : officeSet) {
+        for (Map.Entry<OfficeCurrencyKey, List<LoanProductProvisioningEntry>> entry : officeMap.entrySet()) {
             liabilityMap.clear();
             expenseMap.clear();
-            List<LoanProductProvisioningEntry> entries = officeMap.get(key);
-            for (LoanProductProvisioningEntry entry : entries) {
-                if (liabilityMap.containsKey(entry.getLiabilityAccount())) {
-                    BigDecimal amount = liabilityMap.get(entry.getLiabilityAccount());
-                    amount = amount.add(entry.getReservedAmount());
-                    liabilityMap.put(entry.getLiabilityAccount(), amount);
+            for (LoanProductProvisioningEntry lppEntry : entry.getValue()) {
+                if (liabilityMap.containsKey(lppEntry.getLiabilityAccount())) {
+                    BigDecimal amount = liabilityMap.get(lppEntry.getLiabilityAccount());
+                    amount = amount.add(lppEntry.getReservedAmount());
+                    liabilityMap.put(lppEntry.getLiabilityAccount(), amount);
                 } else {
-                    BigDecimal amount = BigDecimal.ZERO.add(entry.getReservedAmount());
-                    liabilityMap.put(entry.getLiabilityAccount(), amount);
+                    BigDecimal amount = BigDecimal.ZERO.add(lppEntry.getReservedAmount());
+                    liabilityMap.put(lppEntry.getLiabilityAccount(), amount);
                 }
 
-                if (expenseMap.containsKey(entry.getExpenseAccount())) {
-                    BigDecimal amount = expenseMap.get(entry.getExpenseAccount());
-                    amount = amount.add(entry.getReservedAmount());
-                    expenseMap.put(entry.getExpenseAccount(), amount);
+                if (expenseMap.containsKey(lppEntry.getExpenseAccount())) {
+                    BigDecimal amount = expenseMap.get(lppEntry.getExpenseAccount());
+                    amount = amount.add(lppEntry.getReservedAmount());
+                    expenseMap.put(lppEntry.getExpenseAccount(), amount);
                 } else {
-                    BigDecimal amount = BigDecimal.ZERO.add(entry.getReservedAmount());
-                    expenseMap.put(entry.getExpenseAccount(), amount);
+                    BigDecimal amount = BigDecimal.ZERO.add(lppEntry.getReservedAmount());
+                    expenseMap.put(lppEntry.getExpenseAccount(), amount);
                 }
             }
-            createJournalEntry(provisioningEntry.getCreatedDate(), provisioningEntry.getId(), key.office, key.currency, liabilityMap,
-                    expenseMap);
+            createJournalEntry(provisioningEntry.getCreatedDate(), provisioningEntry.getId(), entry.getKey().office,
+                    entry.getKey().currency, liabilityMap, expenseMap);
         }
         return "P" + provisioningEntry.getId();
     }
 
     private void createJournalEntry(LocalDate transactionDate, Long entryId, Office office, String currencyCode,
             Map<GLAccount, BigDecimal> liabilityMap, Map<GLAccount, BigDecimal> expenseMap) {
-        Set<GLAccount> liabilityAccounts = liabilityMap.keySet();
-        for (GLAccount account : liabilityAccounts) {
-            this.helper.createProvisioningCreditJournalEntry(transactionDate, entryId, office, currencyCode, account,
-                    liabilityMap.get(account));
+        for (Map.Entry<GLAccount, BigDecimal> entry : liabilityMap.entrySet()) {
+            this.helper.createProvisioningCreditJournalEntry(transactionDate, entryId, office, currencyCode, entry.getKey(),
+                    entry.getValue());
         }
-        Set<GLAccount> expenseAccounts = expenseMap.keySet();
-        for (GLAccount account : expenseAccounts) {
-            this.helper.createProvisioningDebitJournalEntry(transactionDate, entryId, office, currencyCode, account,
-                    expenseMap.get(account));
+        for (Map.Entry<GLAccount, BigDecimal> entry : expenseMap.entrySet()) {
+            this.helper.createProvisioningDebitJournalEntry(transactionDate, entryId, office, currencyCode, entry.getKey(),
+                    entry.getValue());
         }
     }
 
@@ -555,24 +547,22 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
     }
 
     private void validateBusinessRulesForJournalEntries(final JournalEntryCommand command) {
-        /** check if date of Journal entry is valid ***/
+        // check if date of Journal entry is valid
         final LocalDate transactionDate = command.getTransactionDate();
         // shouldn't be in the future
-        final LocalDate todaysDate = DateUtils.getBusinessLocalDate();
-        if (transactionDate.isAfter(todaysDate)) {
+        if (DateUtils.isDateInTheFuture(transactionDate)) {
             throw new JournalEntryInvalidException(GlJournalEntryInvalidReason.FUTURE_DATE, transactionDate, null, null);
         }
         // shouldn't be before an accounting closure
         final GLClosure latestGLClosure = this.glClosureRepository.getLatestGLClosureByBranch(command.getOfficeId());
         if (latestGLClosure != null) {
-            if (latestGLClosure.getClosingDate().isAfter(transactionDate)
-                    || latestGLClosure.getClosingDate().compareTo(transactionDate) == 0 ? Boolean.TRUE : Boolean.FALSE) {
+            if (!DateUtils.isBefore(latestGLClosure.getClosingDate(), transactionDate)) {
                 throw new JournalEntryInvalidException(GlJournalEntryInvalidReason.ACCOUNTING_CLOSED, latestGLClosure.getClosingDate(),
                         null, null);
             }
         }
 
-        /*** check if credits and debits are valid **/
+        // check if credits and debits are valid
         final SingleDebitOrCreditEntryCommand[] credits = command.getCredits();
         final SingleDebitOrCreditEntryCommand[] debits = command.getDebits();
 
@@ -624,7 +614,7 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
     private PlatformDataIntegrityException handleJournalEntryDataIntegrityIssues(final Throwable realCause,
             final NonTransientDataAccessException dve) {
         log.error("Error occurred.", dve);
-        return new PlatformDataIntegrityException("error.msg.glJournalEntry.unknown.data.integrity.issue",
+        throw ErrorHandler.getMappable(dve, "error.msg.glJournalEntry.unknown.data.integrity.issue",
                 "Unknown data integrity issue with resource Journal Entry: " + realCause.getMessage());
     }
 

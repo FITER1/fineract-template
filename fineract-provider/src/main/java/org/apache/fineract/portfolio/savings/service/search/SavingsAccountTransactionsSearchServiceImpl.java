@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.portfolio.savings.service.search;
 
+import static org.apache.fineract.infrastructure.core.domain.AuditableFieldsConstants.CREATED_DATE_DB_FIELD;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME;
 
 import com.google.gson.JsonObject;
@@ -56,10 +57,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccountTransactionSearchService {
@@ -87,7 +86,7 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
             sortPageable = pageable.withSort(Sort.by(orders.stream()
                     .map(e -> e.withProperty(SearchUtil.validateToJdbcColumnName(e.getProperty(), headersByName, false))).toList()));
         } else {
-            pageable = pageable.withSort(Sort.Direction.DESC, "transaction_date", "created_date", "id");
+            pageable = pageable.withSort(Sort.Direction.DESC, "transaction_date", CREATED_DATE_DB_FIELD, "id");
             sortPageable = pageable;
         }
 
@@ -115,7 +114,7 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
         Object[] args = params.toArray();
 
         String countQuery = "SELECT COUNT(*) " + tm.from() + where;
-        Integer totalElements = jdbcTemplate.queryForObject(countQuery, Integer.class, args);
+        Integer totalElements = jdbcTemplate.queryForObject(countQuery, Integer.class, args); // NOSONAR
         if (totalElements == null || totalElements == 0) {
             return emptyResult;
         }
@@ -267,7 +266,7 @@ public class SavingsAccountTransactionsSearchServiceImpl implements SavingsAccou
 
         // Execute the count Query
         String countQuery = "SELECT COUNT(*)" + from + where;
-        Integer totalElements = jdbcTemplate.queryForObject(countQuery, Integer.class, args);
+        Integer totalElements = jdbcTemplate.queryForObject(countQuery, Integer.class, args); // NOSONAR
         if (totalElements == null || totalElements == 0) {
             return PageableExecutionUtils.getPage(results, pageable, () -> 0);
         }

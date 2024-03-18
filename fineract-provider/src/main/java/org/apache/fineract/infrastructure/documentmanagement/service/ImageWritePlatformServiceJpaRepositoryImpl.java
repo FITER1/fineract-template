@@ -103,7 +103,7 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             this.imageRepository.delete(image);
         }
 
-        return new CommandProcessingResult(clientId);
+        return CommandProcessingResult.resourceResult(clientId);
     }
 
     /**
@@ -134,15 +134,13 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
     private CommandProcessingResult updateImage(final Object owner, final String imageLocation, final StorageType storageType) {
         Image image = null;
         Long clientId = null;
-        if (owner instanceof Client) {
-            Client client = (Client) owner;
+        if (owner instanceof Client client) {
             image = client.getImage();
             clientId = client.getId();
             image = createImage(image, imageLocation, storageType);
             client.setImage(image);
             this.clientRepositoryWrapper.save(client);
-        } else if (owner instanceof Staff) {
-            Staff staff = (Staff) owner;
+        } else if (owner instanceof Staff staff) {
             image = staff.getImage();
             clientId = staff.getId();
             image = createImage(image, imageLocation, storageType);
@@ -150,8 +148,10 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             this.staffRepositoryWrapper.save(staff);
         }
 
-        this.imageRepository.save(image);
-        return new CommandProcessingResult(clientId);
+        if (image != null) {
+            this.imageRepository.save(image);
+        }
+        return CommandProcessingResult.resourceResult(clientId);
     }
 
     private Image createImage(Image image, final String imageLocation, final StorageType storageType) {

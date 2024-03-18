@@ -22,7 +22,10 @@ import org.apache.fineract.infrastructure.event.business.service.BusinessEventNo
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketMappingsRepository;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketRepository;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyRangeRepository;
+import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyActionRepository;
 import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyTagHistoryRepository;
+import org.apache.fineract.portfolio.delinquency.domain.LoanInstallmentDelinquencyTagRepository;
+import org.apache.fineract.portfolio.delinquency.helper.DelinquencyEffectivePauseHelper;
 import org.apache.fineract.portfolio.delinquency.mapper.DelinquencyBucketMapper;
 import org.apache.fineract.portfolio.delinquency.mapper.DelinquencyRangeMapper;
 import org.apache.fineract.portfolio.delinquency.mapper.LoanDelinquencyTagMapper;
@@ -32,6 +35,7 @@ import org.apache.fineract.portfolio.delinquency.service.DelinquencyWritePlatfor
 import org.apache.fineract.portfolio.delinquency.service.DelinquencyWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.delinquency.service.LoanDelinquencyDomainService;
 import org.apache.fineract.portfolio.delinquency.service.LoanDelinquencyDomainServiceImpl;
+import org.apache.fineract.portfolio.delinquency.validator.DelinquencyActionParseAndValidator;
 import org.apache.fineract.portfolio.delinquency.validator.DelinquencyBucketParseAndValidator;
 import org.apache.fineract.portfolio.delinquency.validator.DelinquencyRangeParseAndValidator;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepository;
@@ -50,9 +54,13 @@ public class DelinquencyConfiguration {
             DelinquencyBucketRepository repositoryBucket, LoanDelinquencyTagHistoryRepository repositoryLoanDelinquencyTagHistory,
             DelinquencyRangeMapper mapperRange, DelinquencyBucketMapper mapperBucket,
             LoanDelinquencyTagMapper mapperLoanDelinquencyTagHistory, LoanRepository loanRepository,
-            LoanDelinquencyDomainService loanDelinquencyDomainService) {
+            LoanDelinquencyDomainService loanDelinquencyDomainService,
+            LoanInstallmentDelinquencyTagRepository repositoryLoanInstallmentDelinquencyTag,
+            LoanDelinquencyActionRepository loanDelinquencyActionRepository,
+            DelinquencyEffectivePauseHelper delinquencyEffectivePauseHelper) {
         return new DelinquencyReadPlatformServiceImpl(repositoryRange, repositoryBucket, repositoryLoanDelinquencyTagHistory, mapperRange,
-                mapperBucket, mapperLoanDelinquencyTagHistory, loanRepository, loanDelinquencyDomainService);
+                mapperBucket, mapperLoanDelinquencyTagHistory, loanRepository, loanDelinquencyDomainService,
+                repositoryLoanInstallmentDelinquencyTag, loanDelinquencyActionRepository, delinquencyEffectivePauseHelper);
     }
 
     @Bean
@@ -62,15 +70,20 @@ public class DelinquencyConfiguration {
             DelinquencyBucketRepository repositoryBucket, DelinquencyBucketMappingsRepository repositoryBucketMappings,
             LoanDelinquencyTagHistoryRepository loanDelinquencyTagRepository, LoanRepositoryWrapper loanRepository,
             LoanProductRepository loanProductRepository, BusinessEventNotifierService businessEventNotifierService,
-            LoanDelinquencyDomainService loanDelinquencyDomainService) {
+            LoanDelinquencyDomainService loanDelinquencyDomainService,
+            LoanInstallmentDelinquencyTagRepository loanInstallmentDelinquencyTagRepository,
+            DelinquencyReadPlatformService delinquencyReadPlatformService, LoanDelinquencyActionRepository loanDelinquencyActionRepository,
+            DelinquencyActionParseAndValidator delinquencyActionParseAndValidator,
+            DelinquencyEffectivePauseHelper delinquencyEffectivePauseHelper) {
         return new DelinquencyWritePlatformServiceImpl(dataValidatorBucket, dataValidatorRange, repositoryRange, repositoryBucket,
                 repositoryBucketMappings, loanDelinquencyTagRepository, loanRepository, loanProductRepository, businessEventNotifierService,
-                loanDelinquencyDomainService);
+                loanDelinquencyDomainService, loanInstallmentDelinquencyTagRepository, delinquencyReadPlatformService,
+                loanDelinquencyActionRepository, delinquencyActionParseAndValidator, delinquencyEffectivePauseHelper);
     }
 
     @Bean
     @ConditionalOnMissingBean(LoanDelinquencyDomainService.class)
-    public LoanDelinquencyDomainService loanDelinquencyDomainService() {
-        return new LoanDelinquencyDomainServiceImpl();
+    public LoanDelinquencyDomainService loanDelinquencyDomainService(DelinquencyEffectivePauseHelper delinquencyEffectivePauseHelper) {
+        return new LoanDelinquencyDomainServiceImpl(delinquencyEffectivePauseHelper);
     }
 }

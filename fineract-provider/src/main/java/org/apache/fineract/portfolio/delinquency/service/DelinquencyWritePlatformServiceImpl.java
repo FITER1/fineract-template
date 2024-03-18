@@ -33,28 +33,40 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.event.business.domain.loan.LoanAccountDelinquencyPauseChangedBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanDelinquencyRangeChangeBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.portfolio.delinquency.api.DelinquencyApiConstants;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyBucketData;
 import org.apache.fineract.portfolio.delinquency.data.DelinquencyRangeData;
+import org.apache.fineract.portfolio.delinquency.domain.DelinquencyAction;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucket;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketMappings;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketMappingsRepository;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyBucketRepository;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyRange;
 import org.apache.fineract.portfolio.delinquency.domain.DelinquencyRangeRepository;
+import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyAction;
+import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyActionRepository;
 import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyTagHistory;
 import org.apache.fineract.portfolio.delinquency.domain.LoanDelinquencyTagHistoryRepository;
+import org.apache.fineract.portfolio.delinquency.domain.LoanInstallmentDelinquencyTag;
+import org.apache.fineract.portfolio.delinquency.domain.LoanInstallmentDelinquencyTagRepository;
 import org.apache.fineract.portfolio.delinquency.exception.DelinquencyBucketAgesOverlapedException;
 import org.apache.fineract.portfolio.delinquency.exception.DelinquencyRangeInvalidAgesException;
+import org.apache.fineract.portfolio.delinquency.helper.DelinquencyEffectivePauseHelper;
+import org.apache.fineract.portfolio.delinquency.validator.DelinquencyActionParseAndValidator;
 import org.apache.fineract.portfolio.delinquency.validator.DelinquencyBucketParseAndValidator;
 import org.apache.fineract.portfolio.delinquency.validator.DelinquencyRangeParseAndValidator;
+import org.apache.fineract.portfolio.delinquency.validator.LoanDelinquencyActionData;
 import org.apache.fineract.portfolio.loanaccount.data.CollectionData;
+import org.apache.fineract.portfolio.loanaccount.data.LoanDelinquencyData;
 import org.apache.fineract.portfolio.loanaccount.data.LoanScheduleDelinquencyData;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
+import org.apache.fineract.portfolio.loanaccount.domain.LoanRepaymentScheduleInstallment;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
 import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -71,6 +83,11 @@ public class DelinquencyWritePlatformServiceImpl implements DelinquencyWritePlat
     private final LoanProductRepository loanProductRepository;
     private final BusinessEventNotifierService businessEventNotifierService;
     private final LoanDelinquencyDomainService loanDelinquencyDomainService;
+    private final LoanInstallmentDelinquencyTagRepository loanInstallmentDelinquencyTagRepository;
+    private final DelinquencyReadPlatformService delinquencyReadPlatformService;
+    private final LoanDelinquencyActionRepository loanDelinquencyActionRepository;
+    private final DelinquencyActionParseAndValidator delinquencyActionParseAndValidator;
+    private final DelinquencyEffectivePauseHelper delinquencyEffectivePauseHelper;
 
     @Override
     public CommandProcessingResult createDelinquencyRange(JsonCommand command) {
@@ -141,12 +158,13 @@ public class DelinquencyWritePlatformServiceImpl implements DelinquencyWritePlat
     }
 
     @Override
-    public LoanScheduleDelinquencyData calculateDelinquencyData(LoanScheduleDelinquencyData loanScheduleDelinquencyData) {
+    public LoanScheduleDelinquencyData calculateDelinquencyData(LoanScheduleDelinquencyData loanScheduleDelinquencyData,
+            List<LoanDelinquencyActionData> effectiveDelinquencyList) {
         Loan loan = loanScheduleDelinquencyData.getLoan();
         if (loan == null) {
             loan = this.loanRepository.findOneWithNotFoundDetection(loanScheduleDelinquencyData.getLoanId());
         }
-        final CollectionData collectionData = loanDelinquencyDomainService.getOverdueCollectionData(loan);
+        final CollectionData collectionData = loanDelinquencyDomainService.getOverdueCollectionData(loan, effectiveDelinquencyList);
         log.debug("Delinquency {}", collectionData);
         return new LoanScheduleDelinquencyData(loan.getId(), collectionData.getDelinquentDate(), collectionData.getDelinquentDays(), loan);
     }
@@ -156,28 +174,103 @@ public class DelinquencyWritePlatformServiceImpl implements DelinquencyWritePlat
         Map<String, Object> changes = new HashMap<>();
 
         final Loan loan = this.loanRepository.findOneWithNotFoundDetection(loanId);
+        final List<LoanDelinquencyAction> savedDelinquencyList = delinquencyReadPlatformService
+                .retrieveLoanDelinquencyActions(loan.getId());
+        List<LoanDelinquencyActionData> effectiveDelinquencyList = delinquencyEffectivePauseHelper
+                .calculateEffectiveDelinquencyList(savedDelinquencyList);
         final DelinquencyBucket delinquencyBucket = loan.getLoanProduct().getDelinquencyBucket();
         if (delinquencyBucket != null) {
-            final CollectionData collectionData = loanDelinquencyDomainService.getOverdueCollectionData(loan);
+            final LoanDelinquencyData loanDelinquencyData = loanDelinquencyDomainService.getLoanDelinquencyData(loan,
+                    effectiveDelinquencyList);
+            // loan delinquent data
+            final CollectionData collectionData = loanDelinquencyData.getLoanCollectionData();
+            // loan installments delinquent data
+            final Map<Long, CollectionData> installmentsCollectionData = loanDelinquencyData.getLoanInstallmentsCollectionData();
+            // delinquency for installments
+            if (installmentsCollectionData.size() > 0) {
+                applyDelinquencyDetailsForLoanInstallments(loan, delinquencyBucket, installmentsCollectionData);
+            }
+            // delinquency for loan
             changes = lookUpDelinquencyRange(loan, delinquencyBucket, collectionData.getDelinquentDays());
+
         }
         return new CommandProcessingResultBuilder().withCommandId(command.commandId()).withEntityId(loan.getId())
                 .withEntityExternalId(loan.getExternalId()).with(changes).build();
     }
 
     @Override
-    public void applyDelinquencyTagToLoan(LoanScheduleDelinquencyData loanDelinquencyData) {
+    public void applyDelinquencyTagToLoan(LoanScheduleDelinquencyData loanDelinquencyData,
+            List<LoanDelinquencyActionData> effectiveDelinquencyList) {
         final Loan loan = loanDelinquencyData.getLoan();
         if (loan.hasDelinquencyBucket()) {
             final DelinquencyBucket delinquencyBucket = loan.getLoanProduct().getDelinquencyBucket();
-            final CollectionData collectionData = loanDelinquencyDomainService.getOverdueCollectionData(loan);
+            final LoanDelinquencyData loanDelinquentData = loanDelinquencyDomainService.getLoanDelinquencyData(loan,
+                    effectiveDelinquencyList);
+            // loan delinquent data
+            final CollectionData collectionData = loanDelinquentData.getLoanCollectionData();
+            // loan installments delinquent data
+            final Map<Long, CollectionData> installmentsCollectionData = loanDelinquentData.getLoanInstallmentsCollectionData();
+            // delinquency for installments
+            if (installmentsCollectionData.size() > 0) {
+                applyDelinquencyDetailsForLoanInstallments(loan, delinquencyBucket, installmentsCollectionData);
+            }
             log.debug("Delinquency {}", collectionData);
+            // delinquency for loan
             lookUpDelinquencyRange(loan, delinquencyBucket, collectionData.getDelinquentDays());
         }
     }
 
     @Override
+    @Transactional
+    public CommandProcessingResult createDelinquencyAction(Long loanId, JsonCommand command) {
+        final Loan loan = this.loanRepository.findOneWithNotFoundDetection(loanId);
+        final LocalDate businessDate = DateUtils.getBusinessLocalDate();
+        final List<LoanDelinquencyAction> savedDelinquencyList = delinquencyReadPlatformService.retrieveLoanDelinquencyActions(loanId);
+
+        LoanDelinquencyAction parsedDelinquencyAction = delinquencyActionParseAndValidator.validateAndParseUpdate(command, loan,
+                savedDelinquencyList, businessDate);
+
+        parsedDelinquencyAction.setLoan(loan);
+        LoanDelinquencyAction saved = loanDelinquencyActionRepository.saveAndFlush(parsedDelinquencyAction);
+        // if backdated pause recalculate delinquency data
+        if (DateUtils.isBefore(parsedDelinquencyAction.getStartDate(), businessDate)
+                && DelinquencyAction.PAUSE.equals(parsedDelinquencyAction.getAction())) {
+            recalculateLoanDelinquencyData(loan);
+            // if pause end date is after current business date, loan delinquency pause flag is changed, emit event
+            if (DateUtils.isAfter(parsedDelinquencyAction.getEndDate(), businessDate)) {
+                businessEventNotifierService.notifyPostBusinessEvent(new LoanDelinquencyRangeChangeBusinessEvent(loan));
+            }
+        }
+        businessEventNotifierService.notifyPostBusinessEvent(new LoanAccountDelinquencyPauseChangedBusinessEvent(loan));
+        return new CommandProcessingResultBuilder().withCommandId(command.commandId()) //
+                .withEntityId(saved.getId()) //
+                .withOfficeId(loan.getOfficeId()) //
+                .withClientId(loan.getClientId()) //
+                .withGroupId(loan.getGroupId()) //
+                .withLoanId(loanId) //
+                .build();
+    }
+
+    private void recalculateLoanDelinquencyData(Loan loan) {
+        List<LoanDelinquencyAction> savedDelinquencyList = delinquencyReadPlatformService.retrieveLoanDelinquencyActions(loan.getId());
+        List<LoanDelinquencyActionData> effectiveDelinquencyList = delinquencyEffectivePauseHelper
+                .calculateEffectiveDelinquencyList(savedDelinquencyList);
+
+        CollectionData loanDelinquencyData = loanDelinquencyDomainService.getOverdueCollectionData(loan, effectiveDelinquencyList);
+        LoanScheduleDelinquencyData loanScheduleDelinquencyData = new LoanScheduleDelinquencyData(loan.getId(),
+                loanDelinquencyData.getDelinquentDate(), loanDelinquencyData.getDelinquentDays(), loan);
+        if (loanScheduleDelinquencyData.getOverdueDays() > 0) {
+            applyDelinquencyTagToLoan(loanScheduleDelinquencyData, effectiveDelinquencyList);
+        } else {
+            removeDelinquencyTagToLoan(loan);
+        }
+    }
+
+    @Override
     public void removeDelinquencyTagToLoan(final Loan loan) {
+        if (loan.isEnableInstallmentLevelDelinquency()) {
+            cleanLoanInstallmentsDelinquencyTags(loan);
+        }
         setLoanDelinquencyTag(loan, null);
     }
 
@@ -341,6 +434,11 @@ public class DelinquencyWritePlatformServiceImpl implements DelinquencyWritePlat
                 loanDelinquencyTagPrev.setLiftedOnDate(transactionDate);
                 loanDelinquencyTagHistory.add(loanDelinquencyTagPrev);
                 changes.put("previous", loanDelinquencyTagPrev.getDelinquencyRange());
+                // event when loan goes out of delinquency we do not calculate at
+                // installment level and remove all installment tags, so event needs to raised here.
+                if (loan.isEnableInstallmentLevelDelinquency()) {
+                    businessEventNotifierService.notifyPostBusinessEvent(new LoanDelinquencyRangeChangeBusinessEvent(loan));
+                }
             }
         } else {
             if (optLoanDelinquencyTag.isPresent()) {
@@ -365,7 +463,11 @@ public class DelinquencyWritePlatformServiceImpl implements DelinquencyWritePlat
         }
         if (loanDelinquencyTagHistory.size() > 0) {
             this.loanDelinquencyTagRepository.saveAllAndFlush(loanDelinquencyTagHistory);
-            businessEventNotifierService.notifyPostBusinessEvent(new LoanDelinquencyRangeChangeBusinessEvent(loan));
+            // if installment level delinquency is enabled event will be raised at installment level calculation, no
+            // need to raise the event here
+            if (!loan.isEnableInstallmentLevelDelinquency()) {
+                businessEventNotifierService.notifyPostBusinessEvent(new LoanDelinquencyRangeChangeBusinessEvent(loan));
+            }
         }
         return changes;
     }
@@ -382,4 +484,123 @@ public class DelinquencyWritePlatformServiceImpl implements DelinquencyWritePlat
         return ranges;
     }
 
+    private void applyDelinquencyDetailsForLoanInstallments(final Loan loan, final DelinquencyBucket delinquencyBucket,
+            final Map<Long, CollectionData> installmentsCollectionData) {
+        boolean isDelinquencyRangeChangedForAnyOfInstallment = false;
+        for (LoanRepaymentScheduleInstallment installment : loan.getRepaymentScheduleInstallments()) {
+            if (installmentsCollectionData.containsKey(installment.getId())) {
+                boolean isDelinquencySetForInstallment = setInstallmentDelinquencyDetails(loan, installment, delinquencyBucket,
+                        installmentsCollectionData.get(installment.getId()));
+                isDelinquencyRangeChangedForAnyOfInstallment = isDelinquencyRangeChangedForAnyOfInstallment
+                        || isDelinquencySetForInstallment;
+            }
+        }
+        // remove tags for non existing installments that got deleted due to re-schedule
+        removeDelinquencyTagsForNonExistingInstallments(loan.getId());
+        // raise event if there is any change at installment level delinquency
+        if (isDelinquencyRangeChangedForAnyOfInstallment) {
+            businessEventNotifierService.notifyPostBusinessEvent(new LoanDelinquencyRangeChangeBusinessEvent(loan));
+        }
+
+    }
+
+    private boolean setInstallmentDelinquencyDetails(final Loan loan, final LoanRepaymentScheduleInstallment installment,
+            final DelinquencyBucket delinquencyBucket, final CollectionData installmentDelinquencyData) {
+        DelinquencyRange delinquencyRangeForInstallment = getInstallmentDelinquencyRange(delinquencyBucket,
+                installmentDelinquencyData.getDelinquentDays());
+        return setDelinquencyDetailsForInstallment(loan, installment, installmentDelinquencyData, delinquencyRangeForInstallment);
+    }
+
+    private DelinquencyRange getInstallmentDelinquencyRange(final DelinquencyBucket delinquencyBucket, Long overDueDays) {
+        DelinquencyRange delinquencyRangeForInstallment = null;
+        if (overDueDays > 0) {
+            // Sort the ranges based on the minAgeDays
+            final List<DelinquencyRange> ranges = sortDelinquencyRangesByMinAge(delinquencyBucket.getRanges());
+            for (final DelinquencyRange delinquencyRange : ranges) {
+                if (delinquencyRange.getMaximumAgeDays() == null) { // Last Range in the Bucket
+                    if (delinquencyRange.getMinimumAgeDays() <= overDueDays) {
+                        delinquencyRangeForInstallment = delinquencyRange;
+                        break;
+                    }
+                } else {
+                    if (delinquencyRange.getMinimumAgeDays() <= overDueDays && delinquencyRange.getMaximumAgeDays() >= overDueDays) {
+                        delinquencyRangeForInstallment = delinquencyRange;
+                        break;
+                    }
+                }
+            }
+
+        }
+        return delinquencyRangeForInstallment;
+    }
+
+    private boolean setDelinquencyDetailsForInstallment(final Loan loan, final LoanRepaymentScheduleInstallment installment,
+            CollectionData installmentDelinquencyData, final DelinquencyRange delinquencyRangeForInstallment) {
+        List<LoanInstallmentDelinquencyTag> installmentDelinquencyTags = new ArrayList<>();
+        LocalDate delinquencyCalculationDate = DateUtils.getBusinessLocalDate();
+        boolean isDelinquencyRangeChanged = false;
+
+        LoanInstallmentDelinquencyTag previousInstallmentDelinquencyTag = loanInstallmentDelinquencyTagRepository
+                .findByLoanAndInstallment(loan, installment).orElse(null);
+
+        if (delinquencyRangeForInstallment == null) {
+            // if currentInstallmentDelinquencyTag exists and range is null, installment is out of delinquency, delete
+            // delinquency details
+            if (previousInstallmentDelinquencyTag != null) {
+                // event installment out of delinquency
+                loanInstallmentDelinquencyTagRepository.delete(previousInstallmentDelinquencyTag);
+                isDelinquencyRangeChanged = true;
+            }
+        } else {
+            LoanInstallmentDelinquencyTag installmentDelinquency = null;
+            if (previousInstallmentDelinquencyTag != null) {
+                if (!previousInstallmentDelinquencyTag.getDelinquencyRange().getId().equals(delinquencyRangeForInstallment.getId())) {
+                    // if current delinquency range exists and there is range change, delete previous delinquency
+                    // details and add new range details
+                    installmentDelinquency = new LoanInstallmentDelinquencyTag(delinquencyRangeForInstallment, loan, installment,
+                            delinquencyCalculationDate, null, previousInstallmentDelinquencyTag.getFirstOverdueDate(),
+                            installmentDelinquencyData.getDelinquentAmount());
+                    loanInstallmentDelinquencyTagRepository.delete(previousInstallmentDelinquencyTag);
+                    // event installment delinquency range change
+                    isDelinquencyRangeChanged = true;
+                } else {
+                    previousInstallmentDelinquencyTag.setOutstandingAmount(installmentDelinquencyData.getDelinquentAmount());
+                    installmentDelinquency = previousInstallmentDelinquencyTag;
+                }
+            } else {
+                // add new range, first time delinquent
+                installmentDelinquency = new LoanInstallmentDelinquencyTag(delinquencyRangeForInstallment, loan, installment,
+                        delinquencyCalculationDate, null, installmentDelinquencyData.getDelinquentDate(),
+                        installmentDelinquencyData.getDelinquentAmount());
+                // event installment delinquent
+                isDelinquencyRangeChanged = true;
+            }
+
+            if (installmentDelinquency != null) {
+                installmentDelinquencyTags.add(installmentDelinquency);
+            }
+
+        }
+
+        if (installmentDelinquencyTags.size() > 0) {
+            loanInstallmentDelinquencyTagRepository.saveAllAndFlush(installmentDelinquencyTags);
+        }
+        return isDelinquencyRangeChanged;
+    }
+
+    private void cleanLoanInstallmentsDelinquencyTags(Loan loan) {
+        loanInstallmentDelinquencyTagRepository.deleteAllLoanInstallmentsTags(loan.getId());
+    }
+
+    private void removeDelinquencyTagsForNonExistingInstallments(Long loanId) {
+        List<LoanInstallmentDelinquencyTag> currentLoanInstallmentDelinquencyTags = loanInstallmentDelinquencyTagRepository
+                .findByLoanId(loanId);
+        if (currentLoanInstallmentDelinquencyTags != null && currentLoanInstallmentDelinquencyTags.size() > 0) {
+            List<Long> loanInstallmentTagsForDelete = currentLoanInstallmentDelinquencyTags.stream()
+                    .filter(tag -> tag.getInstallment() == null).map(tag -> tag.getId()).toList();
+            if (loanInstallmentTagsForDelete.size() > 0) {
+                loanInstallmentDelinquencyTagRepository.deleteAllLoanInstallmentsTagsByIds(loanInstallmentTagsForDelete);
+            }
+        }
+    }
 }

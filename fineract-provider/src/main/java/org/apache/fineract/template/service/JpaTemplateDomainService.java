@@ -22,6 +22,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -31,11 +32,9 @@ import org.apache.fineract.template.domain.TemplateMapper;
 import org.apache.fineract.template.domain.TemplateRepository;
 import org.apache.fineract.template.domain.TemplateType;
 import org.apache.fineract.template.exception.TemplateNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+@RequiredArgsConstructor
 public class JpaTemplateDomainService implements TemplateDomainService {
 
     private static final String PROPERTY_NAME = "name";
@@ -44,8 +43,7 @@ public class JpaTemplateDomainService implements TemplateDomainService {
     private static final String PROPERTY_ENTITY = "entity";
     private static final String PROPERTY_TYPE = "type";
 
-    @Autowired
-    private TemplateRepository templateRepository;
+    private final TemplateRepository templateRepository;
 
     @Override
     public List<Template> getAll() {
@@ -83,7 +81,7 @@ public class JpaTemplateDomainService implements TemplateDomainService {
         template.setText(command.stringValueOfParameterNamed(PROPERTY_TEXT));
         template.setEntity(TemplateEntity.values()[command.integerValueSansLocaleOfParameterNamed(PROPERTY_ENTITY)]);
         final int templateTypeId = command.integerValueSansLocaleOfParameterNamed(PROPERTY_TYPE);
-        TemplateType type = null;
+        TemplateType type;
         switch (templateTypeId) {
             case 0:
                 type = TemplateType.DOCUMENT;
@@ -91,6 +89,8 @@ public class JpaTemplateDomainService implements TemplateDomainService {
             case 2:
                 type = TemplateType.SMS;
             break;
+            default:
+                type = null;
         }
         template.setType(type);
 

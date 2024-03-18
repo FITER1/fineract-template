@@ -18,8 +18,11 @@
  */
 package org.apache.fineract.useradministration.service;
 
+import static org.apache.fineract.useradministration.service.AppUserConstants.CLIENTS;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -34,6 +37,7 @@ import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.InvalidJsonException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
+import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.PasswordValidationPolicy;
 import org.apache.fineract.useradministration.domain.PasswordValidationPolicyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -142,17 +146,17 @@ public final class UserDataValidator {
             }
         }
 
-        if (this.fromApiJsonHelper.parameterExists(AppUserConstants.CLIENTS, element)) {
+        if (this.fromApiJsonHelper.parameterExists(CLIENTS, element)) {
             if (isSelfServiceUser == null || !isSelfServiceUser) {
-                baseDataValidator.reset().parameter(AppUserConstants.CLIENTS).failWithCode("not.supported.when.isSelfServiceUser.is.false",
+                baseDataValidator.reset().parameter(CLIENTS).failWithCode("not.supported.when.isSelfServiceUser.is.false",
                         "clients parameter is not supported when isSelfServiceUser parameter is false");
             } else {
-                final JsonArray clientsArray = this.fromApiJsonHelper.extractJsonArrayNamed(AppUserConstants.CLIENTS, element);
-                baseDataValidator.reset().parameter(AppUserConstants.CLIENTS).value(clientsArray).jsonArrayNotEmpty();
+                final JsonArray clientsArray = this.fromApiJsonHelper.extractJsonArrayNamed(CLIENTS, element);
+                baseDataValidator.reset().parameter(CLIENTS).value(clientsArray).jsonArrayNotEmpty();
 
                 for (JsonElement client : clientsArray) {
                     Long clientId = client.getAsLong();
-                    baseDataValidator.reset().parameter(AppUserConstants.CLIENTS).value(clientId).longGreaterThanZero();
+                    baseDataValidator.reset().parameter(CLIENTS).value(clientId).longGreaterThanZero();
                 }
             }
         }
@@ -169,7 +173,33 @@ public final class UserDataValidator {
         }
     }
 
-    public void validateForUpdate(final String json) {
+    private Set<String> getParamNamesFromRequest(final String json) {
+        final JsonElement element = this.fromApiJsonHelper.parse(json);
+        if (element.isJsonObject()) {
+            return ((JsonObject) element).keySet();
+        }
+        return Set.of();
+    }
+
+    void validateFieldLevelACL(final String json, AppUser authenticatedUser) {
+        if (!authenticatedUser.hasAnyPermission("ALL_FUNCTIONS", "UPDATE_USER")) {
+            Set<String> paramNamesFromRequest = getParamNamesFromRequest(json);
+            if (authenticatedUser.isSelfServiceUser()) {
+                // selfService user can change the clients and the password
+                paramNamesFromRequest.removeAll(Set.of(CLIENTS, PASSWORD, REPEAT_PASSWORD));
+            } else {
+                // user without permission can only change the password
+                paramNamesFromRequest.removeAll(Set.of(PASSWORD, REPEAT_PASSWORD));
+            }
+            if (paramNamesFromRequest.size() > 0) {
+                throw new PlatformApiDataValidationException(
+                        List.of(ApiParameterError.parameterError("not.enough.permission.to.update.fields",
+                                "Current user has no permission to update fields", String.join(",", paramNamesFromRequest))));
+            }
+        }
+    }
+
+    public void validateForUpdate(final String json, AppUser authenticatedUser) {
         if (StringUtils.isBlank(json)) {
             throw new InvalidJsonException();
         }
@@ -246,22 +276,23 @@ public final class UserDataValidator {
             }
         }
 
-        if (this.fromApiJsonHelper.parameterExists(AppUserConstants.CLIENTS, element)) {
+        if (this.fromApiJsonHelper.parameterExists(CLIENTS, element)) {
             if (isSelfServiceUser != null && !isSelfServiceUser) {
-                baseDataValidator.reset().parameter(AppUserConstants.CLIENTS).failWithCode("not.supported.when.isSelfServiceUser.is.false",
+                baseDataValidator.reset().parameter(CLIENTS).failWithCode("not.supported.when.isSelfServiceUser.is.false",
                         "clients parameter is not supported when isSelfServiceUser parameter is false");
             } else {
-                final JsonArray clientsArray = this.fromApiJsonHelper.extractJsonArrayNamed(AppUserConstants.CLIENTS, element);
-                baseDataValidator.reset().parameter(AppUserConstants.CLIENTS).value(clientsArray).jsonArrayNotEmpty();
+                final JsonArray clientsArray = this.fromApiJsonHelper.extractJsonArrayNamed(CLIENTS, element);
+                baseDataValidator.reset().parameter(CLIENTS).value(clientsArray).jsonArrayNotEmpty();
 
                 for (JsonElement client : clientsArray) {
                     Long clientId = client.getAsLong();
-                    baseDataValidator.reset().parameter(AppUserConstants.CLIENTS).value(clientId).longGreaterThanZero();
+                    baseDataValidator.reset().parameter(CLIENTS).value(clientId).longGreaterThanZero();
                 }
             }
         }
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
+        validateFieldLevelACL(json, authenticatedUser);
     }
 
     public void validateForBlock(final String json) {

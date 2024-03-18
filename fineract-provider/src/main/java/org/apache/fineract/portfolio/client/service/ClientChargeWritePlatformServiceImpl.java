@@ -36,6 +36,7 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
@@ -99,9 +100,9 @@ public class ClientChargeWritePlatformServiceImpl implements ClientChargeWritePl
             final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
             final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
                     .resource(ClientApiConstants.CLIENT_CHARGES_RESOURCE_NAME);
-            LocalDate activationDate = client.getActivationLocalDate();
+            LocalDate activationDate = client.getActivationDate();
             LocalDate dueDate = clientCharge.getDueLocalDate();
-            if (dueDate.isBefore(activationDate)) {
+            if (DateUtils.isBefore(dueDate, activationDate)) {
                 baseDataValidator.reset().parameter(ClientApiConstants.dueAsOfDateParamName).value(dueDate.format(fmt))
                         .failWithCodeNoParameterAddedToErrorCode("dueDate.before.activationDate");
 
@@ -275,7 +276,7 @@ public class ClientChargeWritePlatformServiceImpl implements ClientChargeWritePl
         if (requiresTransactionDateValidation) {
             validateTransactionDateOnWorkingDay(transactionDate, clientCharge, fmt);
 
-            if (client.getActivationLocalDate() != null && transactionDate.isBefore(client.getActivationLocalDate())) {
+            if (DateUtils.isBefore(transactionDate, client.getActivationDate())) {
                 baseDataValidator.reset().parameter(ClientApiConstants.transactionDateParamName).value(transactionDate.format(fmt))
                         .failWithCodeNoParameterAddedToErrorCode("transaction.before.activationDate");
                 throw new PlatformApiDataValidationException(dataValidationErrors);
@@ -420,17 +421,15 @@ public class ClientChargeWritePlatformServiceImpl implements ClientChargeWritePl
 
     private void handleDataIntegrityIssues(@SuppressWarnings("unused") final Long clientId, final Long clientChargeId,
             final Throwable realCause, final NonTransientDataAccessException dve) {
-
         if (realCause.getMessage().contains("FK_m_client_charge_paid_by_m_client_charge")) {
-
             throw new PlatformDataIntegrityException("error.msg.client.charge.cannot.be.deleted",
                     "Client charge with id `" + clientChargeId + "` cannot be deleted as transactions have been made on the same",
                     "clientChargeId", clientChargeId);
         }
 
         log.error("Error occured.", dve);
-        throw new PlatformDataIntegrityException("error.msg.client.charges.unknown.data.integrity.issue",
-                "Unknown data integrity issue with resource.");
+        throw ErrorHandler.getMappable(dve, "error.msg.client.charges.unknown.data.integrity.issue",
+                "Unknown data integrity issue with resource: " + realCause.getMessage());
     }
 
 }

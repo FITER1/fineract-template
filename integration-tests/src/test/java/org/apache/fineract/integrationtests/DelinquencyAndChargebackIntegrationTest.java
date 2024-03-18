@@ -59,6 +59,7 @@ import org.apache.fineract.integrationtests.common.loans.LoanTestLifecycleExtens
 import org.apache.fineract.integrationtests.common.loans.LoanTransactionHelper;
 import org.apache.fineract.integrationtests.common.products.DelinquencyBucketsHelper;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
+import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.LoanScheduleType;
 import org.apache.fineract.portfolio.loanproduct.domain.PaymentAllocationType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
@@ -108,7 +109,7 @@ public class DelinquencyAndChargebackIntegrationTest {
             // Client and Loan account creation
             final Integer clientId = ClientHelper.createClient(this.requestSpec, this.responseSpec, "01 January 2012");
             final GetLoanProductsProductIdResponse getLoanProductsProductResponse = createLoanProduct(loanTransactionHelper,
-                    delinquencyBucket.getId(), loanProductTestBuilder);
+                    Math.toIntExact(delinquencyBucket.getId()), loanProductTestBuilder);
             assertNotNull(getLoanProductsProductResponse);
 
             // Older date to have more than one overdue installment
@@ -228,7 +229,7 @@ public class DelinquencyAndChargebackIntegrationTest {
             // Client and Loan account creation
             final Integer clientId = ClientHelper.createClient(this.requestSpec, this.responseSpec, "01 January 2012");
             final GetLoanProductsProductIdResponse getLoanProductsProductResponse = createLoanProduct(loanTransactionHelper,
-                    delinquencyBucket.getId(), loanProductTestBuilder);
+                    Math.toIntExact(delinquencyBucket.getId()), loanProductTestBuilder);
             assertNotNull(getLoanProductsProductResponse);
 
             // Older date to have more than one overdue installment
@@ -422,6 +423,7 @@ public class DelinquencyAndChargebackIntegrationTest {
         return Stream.of(Arguments.of(Named.of("DEFAULT_STRATEGY", new LoanProductTestBuilder().withRepaymentStrategy(DEFAULT_STRATEGY))),
                 Arguments.of(Named.of("ADVANCED_PAYMENT_ALLOCATION_STRATEGY",
                         new LoanProductTestBuilder().withRepaymentStrategy(ADVANCED_PAYMENT_ALLOCATION_STRATEGY)
+                                .withLoanScheduleType(LoanScheduleType.PROGRESSIVE)
                                 .addAdvancedPaymentAllocation(createDefaultPaymentAllocation(), createRepaymentPaymentAllocation()))));
     }
 

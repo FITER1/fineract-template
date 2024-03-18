@@ -20,11 +20,14 @@ package org.apache.fineract.organisation.staff.service;
 
 import jakarta.persistence.PersistenceException;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.organisation.office.domain.Office;
 import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
@@ -32,30 +35,17 @@ import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.organisation.staff.domain.StaffRepository;
 import org.apache.fineract.organisation.staff.exception.StaffNotFoundException;
 import org.apache.fineract.organisation.staff.serialization.StaffCommandFromApiJsonDeserializer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+@Slf4j
+@RequiredArgsConstructor
 public class StaffWritePlatformServiceJpaRepositoryImpl implements StaffWritePlatformService {
-
-    private static final Logger LOG = LoggerFactory.getLogger(StaffWritePlatformServiceJpaRepositoryImpl.class);
 
     private final StaffCommandFromApiJsonDeserializer fromApiJsonDeserializer;
     private final StaffRepository staffRepository;
     private final OfficeRepositoryWrapper officeRepositoryWrapper;
-
-    @Autowired
-    public StaffWritePlatformServiceJpaRepositoryImpl(final StaffCommandFromApiJsonDeserializer fromApiJsonDeserializer,
-            final StaffRepository staffRepository, final OfficeRepositoryWrapper officeRepositoryWrapper) {
-        this.fromApiJsonDeserializer = fromApiJsonDeserializer;
-        this.staffRepository = staffRepository;
-        this.officeRepositoryWrapper = officeRepositoryWrapper;
-    }
 
     @Transactional
     @Override
@@ -121,9 +111,7 @@ public class StaffWritePlatformServiceJpaRepositoryImpl implements StaffWritePla
      * Guaranteed to throw an exception no matter what the data integrity issue is.
      */
     private void handleStaffDataIntegrityIssues(final JsonCommand command, final Throwable realCause, final Exception dve) {
-
         if (realCause.getMessage().contains("external_id")) {
-
             final String externalId = command.stringValueOfParameterNamed("externalId");
             throw new PlatformDataIntegrityException("error.msg.staff.duplicate.externalId",
                     "Staff with externalId `" + externalId + "` already exists", "externalId", externalId);
@@ -138,8 +126,8 @@ public class StaffWritePlatformServiceJpaRepositoryImpl implements StaffWritePla
                     "A staff with the given display name '" + displayName + "' already exists", "displayName", displayName);
         }
 
-        LOG.error("Error occured.", dve);
-        throw new PlatformDataIntegrityException("error.msg.staff.unknown.data.integrity.issue",
+        log.error("Error occured.", dve);
+        throw ErrorHandler.getMappable(dve, "error.msg.staff.unknown.data.integrity.issue",
                 "Unknown data integrity issue with resource: " + realCause.getMessage());
     }
 }

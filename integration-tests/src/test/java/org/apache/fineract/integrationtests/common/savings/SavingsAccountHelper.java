@@ -97,7 +97,7 @@ public class SavingsAccountHelper extends IntegrationTest {
     public static final String TRANSACTION_DATE_PLUS_ONE = "02 March 2013";
     public static final String LAST_TRANSACTION_DATE = "01 March 2013";
     public static final String ACCOUNT_TYPE_INDIVIDUAL = "INDIVIDUAL";
-    public static final Integer PAYMENT_TYPE_ID = 1;
+    public static final Long PAYMENT_TYPE_ID = 1L;
 
     public static final String DATE_TIME_FORMAT = "dd MMMM yyyy HH:mm";
     private static final Boolean IS_BLOCK = false;
@@ -107,6 +107,14 @@ public class SavingsAccountHelper extends IntegrationTest {
         this.responseSpec = responseSpec;
     }
 
+    public RequestSpecification getRequestSpec() {
+        return requestSpec;
+    }
+
+    public ResponseSpecification getResponseSpec() {
+        return responseSpec;
+    }
+
     public static String getFutureDate() {
         SimpleDateFormat sdf = new SimpleDateFormat(CommonConstants.DATE_FORMAT, Locale.US);
         Calendar calendar = Calendar.getInstance();
@@ -114,30 +122,35 @@ public class SavingsAccountHelper extends IntegrationTest {
         return sdf.format(calendar.getTime());
     }
 
-    public Integer applyForSavingsApplication(final Integer id, final Integer savingsProductID, final String accountType) {
-        return applyForSavingsApplicationOnDate(id, savingsProductID, accountType, CREATED_DATE);
+    public Integer applyForSavingsApplication(final Integer clientOrGroupId, final Integer savingsProductID, final String accountType) {
+        return applyForSavingsApplicationOnDate(clientOrGroupId, savingsProductID, accountType, CREATED_DATE);
     }
 
-    public Integer applyForSavingsApplicationOnDate(final Integer id, final Integer savingsProductID, final String accountType,
+    public Integer applyForSavingsApplicationOnDate(final Integer clientOrGroupId, final Integer savingsProductID, final String accountType,
             final String submittedOnDate) {
-        return applyForSavingsApplicationOnDate(id, savingsProductID, accountType, null, false, submittedOnDate);
+        return applyForSavingsApplicationOnDate(clientOrGroupId, savingsProductID, accountType, null, false, submittedOnDate);
     }
 
-    public Integer applyForSavingsApplicationWithExternalId(final Integer id, final Integer savingsProductID, final String accountType,
-            String externalId, boolean withdrawalFeeForTransfers) {
-        return applyForSavingsApplicationOnDate(id, savingsProductID, accountType, externalId, withdrawalFeeForTransfers, CREATED_DATE);
+    public Integer applyForSavingsApplicationWithExternalId(final Integer clientOrGroupId, final Integer savingsProductID,
+            final String accountType, String externalId, boolean withdrawalFeeForTransfers) {
+        return applyForSavingsApplicationOnDate(clientOrGroupId, savingsProductID, accountType, externalId, withdrawalFeeForTransfers,
+                CREATED_DATE);
     }
 
-    public Integer applyForSavingsApplicationOnDate(final Integer id, final Integer savingsProductID, final String accountType,
+    public Integer applyForSavingsApplicationOnDate(final Integer clientOrGroupId, final Integer savingsProductID, final String accountType,
             String externalId, boolean withdrawalFeeForTransfers, final String submittedOnDate) {
-        LOG.info("--------------------------------APPLYING FOR SAVINGS APPLICATION--------------------------------");
         final String savingsApplicationJSON = new SavingsApplicationTestBuilder() //
                 .withExternalId(externalId) //
                 .withWithdrawalFeeForTransfers(withdrawalFeeForTransfers) //
                 .withSubmittedOnDate(submittedOnDate) //
-                .build(id.toString(), savingsProductID.toString(), accountType);
+                .build(clientOrGroupId.toString(), savingsProductID.toString(), accountType);
+        return applyForSavingsApplicationOnDate(savingsApplicationJSON);
+    }
+
+    public Integer applyForSavingsApplicationOnDate(String savingsApplicationJson) {
+        LOG.info("--------------------------------APPLYING FOR SAVINGS APPLICATION--------------------------------");
         return Utils.performServerPost(this.requestSpec, this.responseSpec, SAVINGS_ACCOUNT_URL + "?" + Utils.TENANT_IDENTIFIER,
-                savingsApplicationJSON, "savingsId");
+                savingsApplicationJson, "savingsId");
     }
 
     public Integer applyForSavingsApplicationWithDatatables(final Integer id, final Integer savingsProductID, final String accountType,
@@ -255,21 +268,29 @@ public class SavingsAccountHelper extends IntegrationTest {
 
     public Object depositToSavingsAccount(final Integer savingsID, final String amount, String date, String jsonAttributeToGetback) {
         LOG.info("--------------------------------- SAVINGS TRANSACTION DEPOSIT --------------------------------");
-        return performSavingActions(createSavingsTransactionURL(DEPOSIT_SAVINGS_COMMAND, savingsID),
-                getSavingsTransactionJSON(amount, date), jsonAttributeToGetback);
+        return depositToSavingsAccount(savingsID, getSavingsTransactionJSON(amount, date), jsonAttributeToGetback);
+    }
+
+    public Object depositToSavingsAccount(final Integer savingsID, final String jsonBody, String jsonAttributeToGetback) {
+        LOG.info("--------------------------------- SAVINGS TRANSACTION DEPOSIT --------------------------------");
+        return performSavingActions(createSavingsTransactionURL(DEPOSIT_SAVINGS_COMMAND, savingsID), jsonBody, jsonAttributeToGetback);
     }
 
     public Object withdrawalFromSavingsAccount(final Integer savingsId, final String amount, String date, String jsonAttributeToGetback) {
         LOG.info("\n--------------------------------- SAVINGS TRANSACTION WITHDRAWAL --------------------------------");
-        return performSavingActions(createSavingsTransactionURL(WITHDRAW_SAVINGS_COMMAND, savingsId),
-                getSavingsTransactionJSON(amount, date), jsonAttributeToGetback);
+        return withdrawalFromSavingsAccount(savingsId, getSavingsTransactionJSON(amount, date), jsonAttributeToGetback);
     }
 
-    public Object withdrawalFromSavingsAccountWithPaymentType(final Integer savingsId, final String amount, String date, String paymentType,
+    public Object withdrawalFromSavingsAccountWithPaymentType(final Integer savingsId, final String amount, String date, Long paymentTypeId,
             String jsonAttributeToGetback) {
         LOG.info("\n--------------------------------- SAVINGS TRANSACTION WITHDRAWAL WITH PAYMENT TYPE--------------------------------");
-        return performSavingActions(createSavingsTransactionURL(WITHDRAW_SAVINGS_COMMAND, savingsId),
-                getSavingsTransactionPaymentTypeJSON(amount, date, paymentType), jsonAttributeToGetback);
+        return withdrawalFromSavingsAccount(savingsId, getSavingsTransactionPaymentTypeJSON(amount, date, paymentTypeId),
+                jsonAttributeToGetback);
+    }
+
+    public Object withdrawalFromSavingsAccount(final Integer savingsId, final String jsonBody, String jsonAttributeToGetback) {
+        LOG.info("\n--------------------------------- SAVINGS TRANSACTION WITHDRAWAL --------------------------------");
+        return performSavingActions(createSavingsTransactionURL(WITHDRAW_SAVINGS_COMMAND, savingsId), jsonBody, jsonAttributeToGetback);
     }
 
     public Object payChargeToSavingsAccount(final Integer savingsID, final Integer chargeId, final String amount, String date,
@@ -473,52 +494,22 @@ public class SavingsAccountHelper extends IntegrationTest {
     }
 
     private String getSavingsTransactionJSON(final String amount, final String transactionDate) {
-        final HashMap<String, Object> map = new HashMap<>();
-        map.put("locale", CommonConstants.LOCALE);
-        map.put("dateFormat", CommonConstants.DATE_FORMAT);
-        map.put("transactionDate", transactionDate);
-        map.put("transactionAmount", amount);
-        map.put("paymentTypeId", PAYMENT_TYPE_ID);
-        String savingsAccountWithdrawalJson = new Gson().toJson(map);
-        LOG.info(savingsAccountWithdrawalJson);
-        return savingsAccountWithdrawalJson;
+        return SavingsTransactionData.builder().transactionDate(transactionDate).transactionAmount(amount).paymentTypeId(PAYMENT_TYPE_ID)
+                .build().getJson();
     }
 
     private String getSavingsTransactionJSON(final String amount, final String transactionDate, final boolean isBulk) {
-        final HashMap<String, String> map = new HashMap<>();
-        map.put("locale", CommonConstants.LOCALE);
-        map.put("dateFormat", CommonConstants.DATE_FORMAT);
-        map.put("transactionDate", transactionDate);
-        map.put("transactionAmount", amount);
-        map.put("isBulk", String.valueOf(isBulk));
-        String savingsAccountWithdrawalJson = new Gson().toJson(map);
-        LOG.info(savingsAccountWithdrawalJson);
-        return savingsAccountWithdrawalJson;
+        return SavingsTransactionData.builder().transactionDate(transactionDate).transactionAmount(amount).isBulk(isBulk).build().getJson();
     }
 
     private String getLienSavingsTransactionJSON(final String amount, final String transactionDate, final Boolean lienAllowed) {
-        final HashMap<String, Object> map = new HashMap<>();
-        map.put("locale", CommonConstants.LOCALE);
-        map.put("dateFormat", CommonConstants.DATE_FORMAT);
-        map.put("transactionDate", transactionDate);
-        map.put("transactionAmount", amount);
-        map.put("lienAllowed", lienAllowed);
-        map.put("reasonForBlock", "unUsualActivity");
-        String savingsAccountWithdrawalJson = new Gson().toJson(map);
-        LOG.info(savingsAccountWithdrawalJson);
-        return savingsAccountWithdrawalJson;
+        return SavingsTransactionData.builder().transactionDate(transactionDate).transactionAmount(amount).lienAllowed(lienAllowed)
+                .reasonForBlock("unUsualActivity").build().getJson();
     }
 
-    private String getSavingsTransactionPaymentTypeJSON(final String amount, final String transactionDate, final String paymentTypeId) {
-        final HashMap<String, String> map = new HashMap<>();
-        map.put("locale", CommonConstants.LOCALE);
-        map.put("dateFormat", CommonConstants.DATE_FORMAT);
-        map.put("transactionDate", transactionDate);
-        map.put("transactionAmount", amount);
-        map.put("paymentTypeId", paymentTypeId);
-        String savingsAccountWithdrawalJson = new Gson().toJson(map);
-        LOG.info(savingsAccountWithdrawalJson);
-        return savingsAccountWithdrawalJson;
+    private String getSavingsTransactionPaymentTypeJSON(final String amount, final String transactionDate, final Long paymentTypeId) {
+        return SavingsTransactionData.builder().transactionDate(transactionDate).transactionAmount(amount).paymentTypeId(paymentTypeId)
+                .build().getJson();
     }
 
     private String getCalculatedInterestForSavingsApplicationAsJSON() {
@@ -935,6 +926,13 @@ public class SavingsAccountHelper extends IntegrationTest {
         final String GSIM_URL = "/fineract-provider/api/v1/savingsaccounts/gsim/" + gsimID + "?" + Utils.TENANT_IDENTIFIER;
         return Utils.performServerPut(requestSpec, responseSpec, GSIM_URL,
                 updateGsimJSON(clientID.toString(), groupID.toString(), productID.toString()), "");
+    }
+
+    public HashMap getTransactionDetails(Integer savingsId, Integer transactionId) {
+        LOG.info("--------------------------------- GET savings transaction details -------------------------------");
+        final String url = "/fineract-provider/api/v1/savingsaccounts/" + savingsId + "/transactions/" + transactionId + "?"
+                + Utils.TENANT_IDENTIFIER;
+        return Utils.performServerGet(requestSpec, responseSpec, url, "");
     }
 
 }

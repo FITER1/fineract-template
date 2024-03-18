@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Set;
 import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetail;
 import org.apache.fineract.portfolio.savings.SavingsTransactionBooleanValues;
-import org.apache.fineract.useradministration.domain.AppUser;
 
 public interface SavingsAccountDomainService {
 
@@ -50,4 +49,3 @@ public interface SavingsAccountDomainService {
             Boolean lienAllowed);
 
     List<SavingsAccountTransaction> extractNewTransactions(SavingsAccount account);
-}

@@ -18,9 +18,11 @@
  */
 package org.apache.fineract.commands.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.apache.fineract.commands.domain.CommandProcessingResultType;
@@ -47,6 +49,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+@SuppressFBWarnings(value = "RV_EXCEPTION_NOT_THROWN", justification = "False positive")
 public class SynchronousCommandProcessingServiceTest {
 
     @Mock
@@ -85,7 +88,6 @@ public class SynchronousCommandProcessingServiceTest {
 
     @Test
     public void testExecuteCommandSuccess() {
-
         CommandWrapper commandWrapper = Mockito.mock(CommandWrapper.class);
         when(commandWrapper.isDatatableResource()).thenReturn(false);
         when(commandWrapper.isNoteResource()).thenReturn(false);
@@ -103,19 +105,24 @@ public class SynchronousCommandProcessingServiceTest {
         String idk = "idk";
         when(idempotencyKeyResolver.resolve(commandWrapper)).thenReturn(idk);
         CommandSource commandSource = Mockito.mock(CommandSource.class);
-        when(commandSourceService.findCommandSource(commandWrapper, idk)).thenReturn(null).thenReturn(commandSource);
+        long commandId = 1L;
+        when(commandSource.getId()).thenReturn(commandId);
+        when(commandSourceService.findCommandSource(commandWrapper, idk)).thenReturn(null);
+        when(commandSourceService.getCommandSource(commandId)).thenReturn(commandSource);
 
         AppUser appUser = Mockito.mock(AppUser.class);
-        when(commandSourceService.saveInitial(commandWrapper, jsonCommand, appUser, idk)).thenReturn(commandSource);
+        when(commandSourceService.saveInitialNewTransaction(commandWrapper, jsonCommand, appUser, idk)).thenReturn(commandSource);
+        when(commandSourceService.saveResultSameTransaction(commandSource)).thenReturn(commandSource);
+        when(commandSource.getStatus()).thenReturn(CommandProcessingResultType.PROCESSED.getValue());
         when(context.authenticatedUser(Mockito.any(CommandWrapper.class))).thenReturn(appUser);
 
         CommandProcessingResult actualCommandProcessingResult = underTest.executeCommand(commandWrapper, jsonCommand, false);
 
-        verify(commandSourceService).saveInitial(commandWrapper, jsonCommand, appUser, idk);
-        verify(commandSource).setStatus(CommandProcessingResultType.PROCESSED.getValue());
-        verify(commandSourceService).saveResult(commandSource);
+        verify(commandSourceService).saveInitialNewTransaction(commandWrapper, jsonCommand, appUser, idk);
+        assertEquals(CommandProcessingResultType.PROCESSED.getValue(), commandSource.getStatus());
+        verify(commandSourceService).saveResultSameTransaction(commandSource);
 
-        Assertions.assertEquals(commandProcessingResult, actualCommandProcessingResult);
+        assertEquals(commandProcessingResult, actualCommandProcessingResult);
     }
 
     @Test
@@ -142,7 +149,7 @@ public class SynchronousCommandProcessingServiceTest {
 
         AppUser appUser = Mockito.mock(AppUser.class);
         when(context.authenticatedUser(Mockito.any(CommandWrapper.class))).thenReturn(appUser);
-        when(commandSourceService.saveInitial(commandWrapper, jsonCommand, appUser, idk)).thenReturn(commandSource);
+        when(commandSourceService.saveInitialNewTransaction(commandWrapper, jsonCommand, appUser, idk)).thenReturn(commandSource);
 
         CommandSource initialCommandSource = Mockito.mock(CommandSource.class);
 
@@ -152,7 +159,7 @@ public class SynchronousCommandProcessingServiceTest {
             underTest.executeCommand(commandWrapper, jsonCommand, false);
         });
 
-        verify(commandSourceService).saveInitial(commandWrapper, jsonCommand, appUser, idk);
-        verify(commandSourceService).generateErrorException(runtimeException);
+        verify(commandSourceService).saveInitialNewTransaction(commandWrapper, jsonCommand, appUser, idk);
+        verify(commandSourceService).generateErrorInfo(runtimeException);
     }
 }

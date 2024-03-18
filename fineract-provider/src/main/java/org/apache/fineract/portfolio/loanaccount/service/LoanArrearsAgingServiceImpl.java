@@ -32,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
+import org.apache.fineract.infrastructure.core.service.MathUtil;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.event.business.BusinessEventListener;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanAdjustTransactionBusinessEvent;
@@ -58,9 +59,7 @@ import org.apache.fineract.portfolio.loanaccount.loanschedule.data.LoanScheduleP
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
-import org.springframework.stereotype.Service;
 
-@Service
 @Slf4j
 @RequiredArgsConstructor
 public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
@@ -126,14 +125,16 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
 
     @Override
     public void updateLoanArrearsAgeingDetails(final Loan loan) {
-        int count = this.jdbcTemplate.queryForObject("select count(mla.loan_id) from m_loan_arrears_aging mla where mla.loan_id =?",
-                Integer.class, loan.getId());
-        String updateStatement = constructUpdateStatement(loan, count == 0);
-        if (updateStatement == null) {
-            String deletestatement = "DELETE FROM m_loan_arrears_aging WHERE  loan_id=?";
-            this.jdbcTemplate.update(deletestatement, loan.getId()); // NOSONAR
-        } else {
-            this.jdbcTemplate.update(updateStatement);
+        if (loan != null) {
+            int count = this.jdbcTemplate.queryForObject("select count(mla.loan_id) from m_loan_arrears_aging mla where mla.loan_id =?",
+                    Integer.class, loan.getId());
+            String updateStatement = constructUpdateStatement(loan, count == 0);
+            if (updateStatement == null) {
+                String deletestatement = "DELETE FROM m_loan_arrears_aging WHERE  loan_id=?";
+                this.jdbcTemplate.update(deletestatement, loan.getId()); // NOSONAR
+            } else {
+                this.jdbcTemplate.update(updateStatement);
+            }
         }
     }
 
@@ -147,12 +148,12 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         LocalDate businessDate = DateUtils.getBusinessLocalDate();
         LocalDate overDueSince = businessDate;
         for (LoanRepaymentScheduleInstallment installment : installments) {
-            if (installment.getDueDate().isBefore(businessDate)) {
+            if (DateUtils.isBefore(installment.getDueDate(), businessDate)) {
                 principalOverdue = principalOverdue.add(installment.getPrincipalOutstanding(loan.getCurrency()).getAmount());
                 interestOverdue = interestOverdue.add(installment.getInterestOutstanding(loan.getCurrency()).getAmount());
                 feeOverdue = feeOverdue.add(installment.getFeeChargesOutstanding(loan.getCurrency()).getAmount());
                 penaltyOverdue = penaltyOverdue.add(installment.getPenaltyChargesOutstanding(loan.getCurrency()).getAmount());
-                if (installment.isNotFullyPaidOff() && overDueSince.isAfter(installment.getDueDate())) {
+                if (installment.isNotFullyPaidOff() && DateUtils.isAfter(overDueSince, installment.getDueDate())) {
                     overDueSince = installment.getDueDate();
                 }
             }
@@ -210,8 +211,8 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
                             .add(loanSchedulePeriodData.getFeeChargesDue().subtract(loanSchedulePeriodData.getFeeChargesPaid()));
                     penaltyOverdue = penaltyOverdue
                             .add(loanSchedulePeriodData.getPenaltyChargesDue().subtract(loanSchedulePeriodData.getPenaltyChargesPaid()));
-                    if (overDueSince.isAfter(loanSchedulePeriodData.getDueDate()) && loanSchedulePeriodData.getPrincipalDue()
-                            .subtract(loanSchedulePeriodData.getPrincipalPaid()).compareTo(BigDecimal.ZERO) > 0) {
+                    if (DateUtils.isAfter(overDueSince, loanSchedulePeriodData.getDueDate()) && MathUtil
+                            .isGreaterThan(loanSchedulePeriodData.getPrincipalDue(), loanSchedulePeriodData.getPrincipalPaid())) {
                         overDueSince = loanSchedulePeriodData.getDueDate();
                     }
                 }
@@ -394,7 +395,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class RefundEventListener implements BusinessEventListener<LoanRefundPostBusinessEvent> {
+    private final class RefundEventListener implements BusinessEventListener<LoanRefundPostBusinessEvent> {
 
         @SuppressWarnings("unused")
         @Override
@@ -405,7 +406,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class AdjustTransactionBusinessEventEventListener implements BusinessEventListener<LoanAdjustTransactionBusinessEvent> {
+    private final class AdjustTransactionBusinessEventEventListener implements BusinessEventListener<LoanAdjustTransactionBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanAdjustTransactionBusinessEvent event) {
@@ -418,7 +419,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class MakeRepaymentEventListener implements BusinessEventListener<LoanTransactionMakeRepaymentPostBusinessEvent> {
+    private final class MakeRepaymentEventListener implements BusinessEventListener<LoanTransactionMakeRepaymentPostBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanTransactionMakeRepaymentPostBusinessEvent event) {
@@ -428,7 +429,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class UndoWrittenOffEventListener implements BusinessEventListener<LoanUndoWrittenOffBusinessEvent> {
+    private final class UndoWrittenOffEventListener implements BusinessEventListener<LoanUndoWrittenOffBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanUndoWrittenOffBusinessEvent event) {
@@ -438,7 +439,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class WaiveInterestEventListener implements BusinessEventListener<LoanWaiveInterestBusinessEvent> {
+    private final class WaiveInterestEventListener implements BusinessEventListener<LoanWaiveInterestBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanWaiveInterestBusinessEvent event) {
@@ -448,7 +449,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class LoanForeClosureEventListener implements BusinessEventListener<LoanForeClosurePostBusinessEvent> {
+    private final class LoanForeClosureEventListener implements BusinessEventListener<LoanForeClosurePostBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanForeClosurePostBusinessEvent event) {
@@ -458,7 +459,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class LoanChargePaymentEventListener implements BusinessEventListener<LoanChargePaymentPostBusinessEvent> {
+    private final class LoanChargePaymentEventListener implements BusinessEventListener<LoanChargePaymentPostBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanChargePaymentPostBusinessEvent event) {
@@ -468,7 +469,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class AddChargeEventListener implements BusinessEventListener<LoanAddChargeBusinessEvent> {
+    private final class AddChargeEventListener implements BusinessEventListener<LoanAddChargeBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanAddChargeBusinessEvent event) {
@@ -478,7 +479,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class WaiveChargeEventListener implements BusinessEventListener<LoanWaiveChargeBusinessEvent> {
+    private final class WaiveChargeEventListener implements BusinessEventListener<LoanWaiveChargeBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanWaiveChargeBusinessEvent event) {
@@ -488,7 +489,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class ApplyOverdueChargeEventListener implements BusinessEventListener<LoanApplyOverdueChargeBusinessEvent> {
+    private final class ApplyOverdueChargeEventListener implements BusinessEventListener<LoanApplyOverdueChargeBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanApplyOverdueChargeBusinessEvent event) {
@@ -497,7 +498,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class DisbursementEventListener implements BusinessEventListener<LoanDisbursalBusinessEvent> {
+    private final class DisbursementEventListener implements BusinessEventListener<LoanDisbursalBusinessEvent> {
 
         @SuppressWarnings("unused")
         @Override
@@ -507,7 +508,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class GoodwillCreditEventListener implements BusinessEventListener<LoanTransactionGoodwillCreditPostBusinessEvent> {
+    private final class GoodwillCreditEventListener implements BusinessEventListener<LoanTransactionGoodwillCreditPostBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanTransactionGoodwillCreditPostBusinessEvent event) {
@@ -517,7 +518,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class PaymentRefundEventListener implements BusinessEventListener<LoanTransactionPayoutRefundPostBusinessEvent> {
+    private final class PaymentRefundEventListener implements BusinessEventListener<LoanTransactionPayoutRefundPostBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanTransactionPayoutRefundPostBusinessEvent event) {
@@ -527,7 +528,7 @@ public class LoanArrearsAgingServiceImpl implements LoanArrearsAgingService {
         }
     }
 
-    private class LoanBalanceChangedEventListener implements BusinessEventListener<LoanBalanceChangedBusinessEvent> {
+    private final class LoanBalanceChangedEventListener implements BusinessEventListener<LoanBalanceChangedBusinessEvent> {
 
         @Override
         public void onBusinessEvent(LoanBalanceChangedBusinessEvent event) {

@@ -18,17 +18,16 @@
  */
 package org.apache.fineract.commands.service;
 
-import static org.apache.fineract.commands.domain.CommandProcessingResultType.ERROR;
 import static org.apache.fineract.commands.domain.CommandProcessingResultType.UNDER_PROCESSING;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.fineract.batch.exception.ErrorHandler;
 import org.apache.fineract.batch.exception.ErrorInfo;
 import org.apache.fineract.commands.domain.CommandSource;
 import org.apache.fineract.commands.domain.CommandSourceRepository;
 import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.commands.exception.CommandNotFoundException;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
@@ -48,54 +47,56 @@ public class CommandSourceService {
     private final CommandSourceRepository commandSourceRepository;
     private final ErrorHandler errorHandler;
 
+    @NotNull
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
-    public CommandSource saveInitial(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
-        return saveInitialInternal(wrapper, jsonCommand, maker, idempotencyKey);
-    }
-
-    public CommandSource saveInitialNoTransaction(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
-        return saveInitialInternal(wrapper, jsonCommand, maker, idempotencyKey);
+    public CommandSource saveInitialNewTransaction(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
+        return saveInitial(wrapper, jsonCommand, maker, idempotencyKey);
     }
 
     @NotNull
-    private CommandSource saveInitialInternal(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
+    @Transactional(propagation = Propagation.REQUIRED)
+    public CommandSource saveInitialSameTransaction(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
+        return saveInitial(wrapper, jsonCommand, maker, idempotencyKey);
+    }
+
+    @NotNull
+    private CommandSource saveInitial(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
         CommandSource initialCommandSource = getInitialCommandSource(wrapper, jsonCommand, maker, idempotencyKey);
-
-        if (initialCommandSource.getCommandJson() == null) {
-            initialCommandSource.setCommandJson("{}");
-        }
-
         return commandSourceRepository.saveAndFlush(initialCommandSource);
     }
 
-    public void saveFailed(CommandSource commandSource) {
-        commandSource.setStatus(ERROR.getValue());
-        commandSourceRepository.saveAndFlush(commandSource);
-    }
-
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.REPEATABLE_READ)
-    public CommandSource saveResult(CommandSource commandSource) {
+    public CommandSource saveResultNewTransaction(@NotNull CommandSource commandSource) {
+        return saveResult(commandSource);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public CommandSource saveResultSameTransaction(@NotNull CommandSource commandSource) {
+        return saveResult(commandSource);
+    }
+
+    @NotNull
+    private CommandSource saveResult(@NotNull CommandSource commandSource) {
         return commandSourceRepository.saveAndFlush(commandSource);
     }
 
-    public CommandSource saveResultNoTransaction(CommandSource commandSource) {
-        return commandSourceRepository.saveAndFlush(commandSource);
+    public ErrorInfo generateErrorInfo(Throwable t) {
+        return errorHandler.handle(ErrorHandler.getMappable(t));
     }
 
-    public ErrorInfo generateErrorException(Throwable t) {
-        if (t instanceof final RuntimeException e) {
-            return errorHandler.handle(e);
-        } else {
-            return new ErrorInfo(500, 9999, "{\"Exception\": " + t.toString() + "}");
-        }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public CommandSource getCommandSource(Long commandSourceId) {
+        return commandSourceRepository.findById(commandSourceId).orElseThrow(() -> new CommandNotFoundException(commandSourceId));
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
     public CommandSource findCommandSource(CommandWrapper wrapper, String idempotencyKey) {
         return commandSourceRepository.findByActionNameAndEntityNameAndIdempotencyKey(wrapper.actionName(), wrapper.entityName(),
                 idempotencyKey);
     }
 
-    private CommandSource getInitialCommandSource(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
+    @Transactional(propagation = Propagation.REQUIRED)
+    public CommandSource getInitialCommandSource(CommandWrapper wrapper, JsonCommand jsonCommand, AppUser maker, String idempotencyKey) {
         CommandSource commandSourceResult;
         if (jsonCommand.commandId() != null) {
             commandSourceResult = commandSourceRepository.findById(jsonCommand.commandId())
@@ -103,6 +104,9 @@ public class CommandSourceService {
             commandSourceResult.markAsChecked(maker);
         } else {
             commandSourceResult = CommandSource.fullEntryFrom(wrapper, jsonCommand, maker, idempotencyKey, UNDER_PROCESSING.getValue());
+        }
+        if (commandSourceResult.getCommandJson() == null) {
+            commandSourceResult.setCommandJson("{}");
         }
         return commandSourceResult;
     }

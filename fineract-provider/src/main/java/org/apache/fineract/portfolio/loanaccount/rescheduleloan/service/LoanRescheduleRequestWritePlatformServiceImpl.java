@@ -20,7 +20,6 @@ package org.apache.fineract.portfolio.loanaccount.rescheduleloan.service;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -39,9 +38,9 @@ import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
+import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
-import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.event.business.domain.loan.LoanRescheduledDueAdjustScheduleBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
@@ -272,12 +271,12 @@ public class LoanRescheduleRequestWritePlatformServiceImpl implements LoanResche
             final Integer termType = LoanTermVariationType.EMI_AMOUNT.getValue();
             List<LoanRepaymentScheduleInstallment> installments = loan.getRepaymentScheduleInstallments();
             for (LoanRepaymentScheduleInstallment installment : installments) {
-                if (installment.getDueDate().isEqual(rescheduleFromLocDate) || installment.getDueDate().isEqual(endDateLocDate)
-                        || (installment.getDueDate().isAfter(rescheduleFromLocDate) && installment.getDueDate().isBefore(endDateLocDate))) {
+                if (!DateUtils.isBefore(installment.getDueDate(), rescheduleFromLocDate)
+                        && !DateUtils.isAfter(installment.getDueDate(), endDateLocDate)) {
                     createLoanTermVariations(loanRescheduleRequest, termType, loan, installment.getDueDate(), installment.getDueDate(),
                             loanRescheduleRequestToTermVariationMappings, isActive, true, emi, parent);
                 }
-                if (installment.getDueDate().isAfter(endDateLocDate)) {
+                if (DateUtils.isAfter(installment.getDueDate(), endDateLocDate)) {
                     break;
                 }
             }
@@ -394,8 +393,8 @@ public class LoanRescheduleRequestWritePlatformServiceImpl implements LoanResche
                         activeLoanTermVariation.markAsInactive();
                         rescheduleFromDate = activeLoanTermVariation.fetchTermApplicaDate();
                         dueDateVariationInCurrentRequest.setTermApplicableFrom(rescheduleFromDate);
-                    } else if (!activeLoanTermVariation.fetchTermApplicaDate().isBefore(fromScheduleDate)) {
-                        while (currentScheduleDate.isBefore(activeLoanTermVariation.fetchTermApplicaDate())) {
+                    } else if (!DateUtils.isBefore(activeLoanTermVariation.fetchTermApplicaDate(), fromScheduleDate)) {
+                        while (DateUtils.isBefore(currentScheduleDate, activeLoanTermVariation.fetchTermApplicaDate())) {
                             currentScheduleDate = DEFAULT_SCHEDULED_DATE_GENERATOR.generateNextRepaymentDate(currentScheduleDate,
                                     loanApplicationTerms, false);
                             modifiedScheduleDate = DEFAULT_SCHEDULED_DATE_GENERATOR.generateNextRepaymentDate(modifiedScheduleDate,
@@ -432,17 +431,22 @@ public class LoanRescheduleRequestWritePlatformServiceImpl implements LoanResche
              * loanTermVariation.setApplicableFromDate(adjustedDate); } } }
              */
 
-            final RoundingMode roundingMode = MoneyHelper.getRoundingMode();
-            final MathContext mathContext = new MathContext(8, roundingMode);
+            final MathContext mathContext = MoneyHelper.getMathContext();
             final LoanRepaymentScheduleTransactionProcessor loanRepaymentScheduleTransactionProcessor = this.loanRepaymentScheduleTransactionProcessorFactory
                     .determineProcessor(loan.transactionProcessingStrategy());
-            final LoanScheduleGenerator loanScheduleGenerator = this.loanScheduleFactory.create(loanApplicationTerms.getInterestMethod());
+            final LoanScheduleGenerator loanScheduleGenerator = this.loanScheduleFactory.create(loanApplicationTerms.getLoanScheduleType(),
+                    loanApplicationTerms.getInterestMethod());
             final LoanLifecycleStateMachine loanLifecycleStateMachine = null;
             loan.setHelpers(loanLifecycleStateMachine, this.loanSummaryWrapper, this.loanRepaymentScheduleTransactionProcessorFactory);
             final LoanScheduleDTO loanSchedule = loanScheduleGenerator.rescheduleNextInstallments(mathContext, loanApplicationTerms, loan,
                     loanApplicationTerms.getHolidayDetailDTO(), loanRepaymentScheduleTransactionProcessor, rescheduleFromDate);
 
-            loan.updateLoanSchedule(loanSchedule.getInstallments());
+            // Either the installments got recalculated or the model
+            if (loanSchedule.getInstallments() != null) {
+                loan.updateLoanSchedule(loanSchedule.getInstallments());
+            } else {
+                loan.updateLoanSchedule(loanSchedule.getLoanScheduleModel());
+            }
             loan.recalculateAllCharges();
             ChangedTransactionDetail changedTransactionDetail = loan.processTransactions();
 
@@ -579,11 +583,8 @@ public class LoanRescheduleRequestWritePlatformServiceImpl implements LoanResche
      *
      **/
     private void handleDataIntegrityViolation(final NonTransientDataAccessException dve) {
-
         LOG.error("Error occured.", dve);
-
-        throw new PlatformDataIntegrityException("error.msg.loan.reschedule.unknown.data.integrity.issue",
+        throw ErrorHandler.getMappable(dve, "error.msg.loan.reschedule.unknown.data.integrity.issue",
                 "Unknown data integrity issue with resource.");
     }
-
 }

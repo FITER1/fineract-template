@@ -37,7 +37,7 @@ public class PagedRequest<T> {
     private int page;
     private int size = DEFAULT_PAGE_SIZE;
 
-    private List<SortOrder> sorts = new ArrayList<>();
+    private final List<SortOrder> sorts = new ArrayList<>();
 
     public Optional<T> getRequest() {
         return Optional.ofNullable(request);
@@ -54,7 +54,7 @@ public class PagedRequest<T> {
 
     @Data
     @SuppressWarnings({ "unused" })
-    private static class SortOrder {
+    private static final class SortOrder {
 
         private Sort.Direction direction;
         private String property;
