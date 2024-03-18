@@ -150,7 +150,6 @@ public final class SavingsAccountTransaction extends AbstractAuditableWithUTCDat
     SavingsAccountTransaction() {
         this.dateOf = null;
         this.typeOf = null;
-        this.createdDate = null;
     }
 
     private SavingsAccountTransaction(final SavingsAccount savingsAccount, final Office office, final PaymentDetail paymentDetail,

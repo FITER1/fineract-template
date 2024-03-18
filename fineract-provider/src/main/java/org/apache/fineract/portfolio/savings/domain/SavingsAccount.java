@@ -742,7 +742,7 @@ public class SavingsAccount extends AbstractAuditableWithUTCDateTimeCustom {
                 } else if (totalTax.compareTo(withholdTransaction.getAmount()) != 0) {
                     withholdTransaction.reverse();
                     SavingsAccountTransaction newWithholdTransaction = SavingsAccountTransaction.withHoldTax(this, office(),
-                            withholdTransaction.transactionLocalDate(), Money.of(currency, totalTax), taxSplit);
+                            withholdTransaction.getTransactionDate(), Money.of(currency, totalTax), taxSplit);
                     addNewTransaction(newWithholdTransaction);
                     isTaxAdded = true;
                 }
@@ -1282,7 +1282,6 @@ public class SavingsAccount extends AbstractAuditableWithUTCDateTimeCustom {
                 "savingsaccount");
         validateActivityNotBeforeClientOrGroupTransferDate(SavingsEvent.SAVINGS_WITHDRAWAL, transactionDTO.getTransactionDate());
 
-
         if (applyWithdrawFee) {
             // auto pay withdrawal fee
             payWithdrawalFee(transactionDTO.getTransactionAmount(), transactionDTO.getTransactionDate(), transactionDTO.getPaymentDetail(),
@@ -1301,8 +1300,8 @@ public class SavingsAccount extends AbstractAuditableWithUTCDateTimeCustom {
 
         if (applyWithdrawFee) {
             // auto pay withdrawal fee
-            payWithdrawalFee(transactionDTO.getTransactionAmount(), transactionDTO.getTransactionDate(), transactionDTO.getAppUser(),
-                    transactionDTO.getPaymentDetail(), backdatedTxnsAllowedTill, refNo);
+            payWithdrawalFee(transactionDTO.getTransactionAmount(), transactionDTO.getTransactionDate(), transactionDTO.getPaymentDetail(),
+                    backdatedTxnsAllowedTill, refNo);
         }
 
         if (this.sub_status.equals(SavingsAccountSubStatusEnum.INACTIVE.getValue())

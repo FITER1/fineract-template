@@ -88,7 +88,6 @@ public class DepositAccountDomainServiceJpa implements DepositAccountDomainServi
             final AccountNumberFormatRepositoryWrapper accountNumberFormatRepository,
             final CalendarInstanceRepository calendarInstanceRepository,
             final SavingsAccountTransactionRepository savingsAccountTransactionRepository) {
-        this.context = context;
         this.savingsAccountRepository = savingsAccountRepository;
         this.journalEntryWritePlatformService = journalEntryWritePlatformService;
         this.accountNumberGenerator = accountNumberGenerator;
@@ -135,7 +134,6 @@ public class DepositAccountDomainServiceJpa implements DepositAccountDomainServi
             final LocalDate transactionDate, final BigDecimal transactionAmount, final PaymentDetail paymentDetail,
             final boolean isRegularTransaction) {
         account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
-        AppUser user = getAppUserIfPresent();
         final boolean isSavingsInterestPostingAtCurrentPeriodEnd = this.configurationDomainService
                 .isSavingsInterestPostingAtCurrentPeriodEnd();
         final Integer financialYearBeginningMonth = this.configurationDomainService.retrieveFinancialYearBeginningMonth();
@@ -194,7 +192,7 @@ public class DepositAccountDomainServiceJpa implements DepositAccountDomainServi
     @Transactional
     @Override
     public Long handleFDAccountClosure(final FixedDepositAccount account, final PaymentDetail paymentDetail, final AppUser user,
-            final JsonCommand command, final LocalDate tenantsTodayDate, final Map<String, Object> changes) {
+            final JsonCommand command, final Map<String, Object> changes) {
 
         account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
         final boolean isSavingsInterestPostingAtCurrentPeriodEnd = this.configurationDomainService

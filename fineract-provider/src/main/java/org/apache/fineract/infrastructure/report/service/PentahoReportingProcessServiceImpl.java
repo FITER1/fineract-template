@@ -67,7 +67,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
 
     @Autowired
     public PentahoReportingProcessServiceImpl(final PlatformSecurityContext context, final FineractProperties fineractProperties,
-                                              final DatabasePasswordEncryptor databasePasswordEncryptor) {
+            final DatabasePasswordEncryptor databasePasswordEncryptor) {
         ClassicEngineBoot.getInstance().start();
 
         this.context = context;

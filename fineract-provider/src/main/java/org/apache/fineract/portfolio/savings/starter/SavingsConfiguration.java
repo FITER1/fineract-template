@@ -229,7 +229,8 @@ public class SavingsConfiguration {
             DepositAccountReadPlatformService depositAccountReadPlatformService, CalendarInstanceRepository calendarInstanceRepository,
             ConfigurationDomainService configurationDomainService, HolidayRepositoryWrapper holidayRepository,
             WorkingDaysRepositoryWrapper workingDaysRepository,
-            DepositAccountOnHoldTransactionRepository depositAccountOnHoldTransactionRepository
+            DepositAccountOnHoldTransactionRepository depositAccountOnHoldTransactionRepository,
+            SavingsAccountDomainService savingsAccountDomainService
 
     ) {
         return new DepositAccountWritePlatformServiceJpaRepositoryImpl(context, savingAccountRepositoryWrapper,
@@ -238,7 +239,8 @@ public class SavingsConfiguration {
                 journalEntryWritePlatformService, depositAccountDomainService, noteRepository, accountTransfersReadPlatformService,
                 chargeRepository, savingsAccountChargeRepository, accountAssociationsReadPlatformService,
                 accountTransfersWritePlatformService, depositAccountReadPlatformService, calendarInstanceRepository,
-                configurationDomainService, holidayRepository, workingDaysRepository, depositAccountOnHoldTransactionRepository);
+                configurationDomainService, holidayRepository, workingDaysRepository, depositAccountOnHoldTransactionRepository,
+                savingsAccountDomainService);
     }
 
     @Bean

@@ -45,7 +45,7 @@ public interface SavingsAccountDomainService {
     SavingsAccountTransaction handleReversal(SavingsAccount account, List<SavingsAccountTransaction> savingsAccountTransactions,
             boolean backdatedTxnsAllowedTill);
 
-    SavingsAccountTransaction handleHold(SavingsAccount account, AppUser createdUser, BigDecimal amount, LocalDate transactionDate,
-            Boolean lienAllowed);
+    SavingsAccountTransaction handleHold(SavingsAccount account, BigDecimal amount, LocalDate transactionDate, Boolean lienAllowed);
 
     List<SavingsAccountTransaction> extractNewTransactions(SavingsAccount account);
+}

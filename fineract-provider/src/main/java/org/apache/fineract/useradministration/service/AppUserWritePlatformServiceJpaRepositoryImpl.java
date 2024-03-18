@@ -18,8 +18,8 @@
  */
 package org.apache.fineract.useradministration.service;
 
-import static org.apache.fineract.useradministration.service.UserDataValidator.BLOCK_DAYS;
 import static org.apache.fineract.useradministration.service.AppUserConstants.CLIENTS;
+import static org.apache.fineract.useradministration.service.UserDataValidator.BLOCK_DAYS;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

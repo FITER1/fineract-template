@@ -36,7 +36,6 @@ import org.apache.fineract.infrastructure.event.business.domain.savings.transact
 import org.apache.fineract.infrastructure.event.business.domain.savings.transaction.SavingsWithdrawalBusinessEvent;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.organisation.monetary.domain.ApplicationCurrencyRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.organisation.monetary.domain.MoneyHelper;
 import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetail;
@@ -54,7 +53,6 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
     private final PlatformSecurityContext context;
     private final SavingsAccountRepositoryWrapper savingsAccountRepository;
     private final SavingsAccountTransactionRepository savingsAccountTransactionRepository;
-    private final ApplicationCurrencyRepositoryWrapper applicationCurrencyRepositoryWrapper;
     private final JournalEntryWritePlatformService journalEntryWritePlatformService;
     private final ConfigurationDomainService configurationDomainService;
     private final DepositAccountOnHoldTransactionRepository depositAccountOnHoldTransactionRepository;
@@ -63,14 +61,12 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
     @Autowired
     public SavingsAccountDomainServiceJpa(final SavingsAccountRepositoryWrapper savingsAccountRepository,
             final SavingsAccountTransactionRepository savingsAccountTransactionRepository,
-            final ApplicationCurrencyRepositoryWrapper applicationCurrencyRepositoryWrapper,
             final JournalEntryWritePlatformService journalEntryWritePlatformService,
             final ConfigurationDomainService configurationDomainService, final PlatformSecurityContext context,
             final DepositAccountOnHoldTransactionRepository depositAccountOnHoldTransactionRepository,
             final BusinessEventNotifierService businessEventNotifierService) {
         this.savingsAccountRepository = savingsAccountRepository;
         this.savingsAccountTransactionRepository = savingsAccountTransactionRepository;
-        this.applicationCurrencyRepositoryWrapper = applicationCurrencyRepositoryWrapper;
         this.journalEntryWritePlatformService = journalEntryWritePlatformService;
         this.configurationDomainService = configurationDomainService;
         this.context = context;
@@ -165,14 +161,6 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
         return newTransactions;
     }
 
-    private AppUser getAppUserIfPresent() {
-        AppUser user = null;
-        if (this.context != null) {
-            user = this.context.getAuthenticatedUserIfPresent();
-        }
-        return user;
-    }
-
     @Transactional
     @Override
     public SavingsAccountTransaction handleDeposit(final SavingsAccount account, final DateTimeFormatter fmt,
@@ -188,7 +176,6 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
             final boolean isAccountTransfer, final boolean isRegularTransaction,
             final SavingsAccountTransactionType savingsAccountTransactionType, final boolean backdatedTxnsAllowedTill) {
         account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
-        AppUser user = getAppUserIfPresent();
         context.authenticatedUser();
         account.validateForAccountBlock();
         account.validateForCreditBlock();
