@@ -247,7 +247,7 @@ bootJar {
 
 jib {
     from {
-        image = 'azul/zulu-openjdk-alpine:17'
+        image = 'azul/zulu-openjdk-debian:17'
         platforms {
             platform {
                 architecture = System.getProperty("os.arch").equals("aarch64")?"arm64":"amd64"
@@ -262,6 +262,15 @@ jib {
             "${project.version}",
             'latest'
         ]
+    }
+
+    extraDirectories {
+        paths {
+            path {
+                from = 'pentahoReports'
+                into = '/.mifosx/pentahoReports'
+            }
+        }
     }
 
     container {
