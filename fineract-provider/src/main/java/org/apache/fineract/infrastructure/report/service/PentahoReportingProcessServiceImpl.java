@@ -218,13 +218,13 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
     @Override
     public Map<String, String> getReportParams(final MultivaluedMap<String, String> queryParams) {
         final Map<String, String> reportParams = new HashMap<>();
-        final var keys = queryParams.keySet();
+        final var entries = queryParams.entrySet();
         String pKey;
         String pValue;
-        for (final String k : keys) {
-            if (k.startsWith("R_")) {
-                pKey = k.substring(2);
-                pValue = queryParams.get(k).get(0);
+        for (final Map.Entry<String, List<String>> entry : entries) {
+            if (entry.getKey().startsWith("R_")) {
+                pKey = entry.getKey().substring(2);
+                pValue = entry.getValue().get(0);
                 reportParams.put(pKey, pValue);
             }
         }

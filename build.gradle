@@ -278,7 +278,11 @@ allprojects  {
             ".mailmap",
             '**/images/diag-*.svg',
             '**/*.avsc',
-            "**/generated/**/*MapperImpl.java"
+            "**/generated/**/*MapperImpl.java",
+            // Pentaho reports
+            '**/*.prpt',
+            '**/*.properties',
+            '**/*.PROPERTIES',
         ]
     }
 }
