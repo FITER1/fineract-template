@@ -103,23 +103,23 @@ gradle clean bootRun'''
 
 version = '0.0.0-SNAPSHOT'
 
-gitVersioning.apply {
-    refs {
-        considerTagsOnBranches = true
-        describeTagPattern = '.*(\\d+\\.\\d+\\.\\d+).*'
-        describeTagFirstParent = false
-
-        branch("\\d+\\.\\d+\\.\\d+") {
-            version = '${describe.tag.version.major}.${describe.tag.version.minor}.${describe.tag.version.patch}'
-        }
-        branch("maintenance\\/\\d+\\.\\d+") {
-            version = '${describe.tag.version.major}.${describe.tag.version.minor}.${describe.tag.version.patch}'
-        }
-    }
-    rev {
-        version = '${describe.tag.version.major}.${describe.tag.version.minor.next}.${describe.tag.version.patch}-SNAPSHOT'
-    }
-}
+//gitVersioning.apply {
+//    refs {
+//        considerTagsOnBranches = true
+//        describeTagPattern = '.*(\\d+\\.\\d+\\.\\d+).*'
+//        describeTagFirstParent = false
+//
+//        branch("\\d+\\.\\d+\\.\\d+") {
+//            version = '${describe.tag.version.major}.${describe.tag.version.minor}.${describe.tag.version.patch}'
+//        }
+//        branch("maintenance\\/\\d+\\.\\d+") {
+//            version = '${describe.tag.version.major}.${describe.tag.version.minor}.${describe.tag.version.patch}'
+//        }
+//    }
+//    rev {
+//        version = '${describe.tag.version.major}.${describe.tag.version.minor.next}.${describe.tag.version.patch}-SNAPSHOT'
+//    }
+//}
 
 ext['groovy.version'] = '4.0.17'
 ext['swaggerFile'] = "$rootDir/fineract-provider/build/classes/java/main/static/fineract.json".toString()
