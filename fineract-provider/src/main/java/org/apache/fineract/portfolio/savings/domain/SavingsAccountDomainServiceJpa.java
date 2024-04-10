@@ -79,6 +79,8 @@ public class SavingsAccountDomainServiceJpa implements SavingsAccountDomainServi
     public SavingsAccountTransaction handleWithdrawal(final SavingsAccount account, final DateTimeFormatter fmt,
             final LocalDate transactionDate, final BigDecimal transactionAmount, final PaymentDetail paymentDetail,
             final SavingsTransactionBooleanValues transactionBooleanValues, final boolean backdatedTxnsAllowedTill) {
+
+        account.setSavingsAccountTransactionRepository(this.savingsAccountTransactionRepository);
         context.authenticatedUser();
         account.validateForAccountBlock();
         account.validateForDebitBlock();
