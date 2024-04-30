@@ -29,9 +29,12 @@ import org.apache.fineract.infrastructure.documentmanagement.data.ImageData;
 import org.apache.fineract.infrastructure.documentmanagement.domain.StorageType;
 import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.organisation.staff.domain.StaffRepositoryWrapper;
+import org.apache.fineract.organisation.staff.exception.StaffNotFoundException;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.client.exception.ImageNotFoundException;
+import org.apache.fineract.settings.office.domain.AppImage;
+import org.apache.fineract.settings.office.domain.AppImagesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -45,14 +48,16 @@ public class ImageReadPlatformServiceImpl implements ImageReadPlatformService {
     private final ContentRepositoryFactory contentRepositoryFactory;
     private final ClientRepositoryWrapper clientRepositoryWrapper;
     private final StaffRepositoryWrapper staffRepositoryWrapper;
+    private final AppImagesRepository appImagesRepository;
 
     @Autowired
     public ImageReadPlatformServiceImpl(final JdbcTemplate jdbcTemplate, final ContentRepositoryFactory documentStoreFactory,
-            final ClientRepositoryWrapper clientRepositoryWrapper, StaffRepositoryWrapper staffRepositoryWrapper) {
+                                        final ClientRepositoryWrapper clientRepositoryWrapper, StaffRepositoryWrapper staffRepositoryWrapper, AppImagesRepository appImagesRepository) {
         this.staffRepositoryWrapper = staffRepositoryWrapper;
         this.jdbcTemplate = jdbcTemplate;
         this.contentRepositoryFactory = documentStoreFactory;
         this.clientRepositoryWrapper = clientRepositoryWrapper;
+        this.appImagesRepository = appImagesRepository;
     }
 
     private static final class ImageMapper implements RowMapper<ImageData> {
@@ -70,6 +75,9 @@ public class ImageReadPlatformServiceImpl implements ImageReadPlatformService {
                 builder.append(" from m_image image , m_client client " + " where client.image_id = image.id and client.id=?");
             } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityType)) {
                 builder.append("from m_image image , m_staff staff " + " where staff.image_id = image.id and staff.id=?");
+            }
+            else if (EntityTypeForImages.APP.toString().equalsIgnoreCase(entityType)) {
+                builder.append("from m_image image , m_app_image appImage " + " where appImage.image_id = image.id and appImage.id=?");
             }
             return builder.toString();
         }
@@ -93,6 +101,9 @@ public class ImageReadPlatformServiceImpl implements ImageReadPlatformService {
             } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityType)) {
                 Staff owner = this.staffRepositoryWrapper.findOneWithNotFoundDetection(entityId);
                 displayName = owner.displayName();
+            } else if (EntityTypeForImages.APP.toString().equalsIgnoreCase(entityType)) {
+                AppImage owner = this.appImagesRepository.findById(entityId).orElseThrow(() -> new StaffNotFoundException(entityId));
+                displayName = owner.getAppImageName();
             } else {
                 displayName = "UnknownEntityType:" + entityType;
             }
@@ -104,7 +115,7 @@ public class ImageReadPlatformServiceImpl implements ImageReadPlatformService {
             final ContentRepository contentRepository = this.contentRepositoryFactory.getRepository(imageData.storageType());
             return contentRepository.fetchImage(imageData);
         } catch (final EmptyResultDataAccessException e) {
-            throw new ImageNotFoundException("clients", entityId, e);
+            throw new ImageNotFoundException(entityType, entityId, e);
         }
     }
 }
