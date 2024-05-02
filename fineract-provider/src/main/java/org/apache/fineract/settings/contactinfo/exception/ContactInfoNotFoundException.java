@@ -16,16 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.settings.office.exception;
+package org.apache.fineract.settings.contactinfo.exception;
 
 import org.apache.fineract.infrastructure.core.exception.AbstractPlatformResourceNotFoundException;
 
 /**
  * A {@link RuntimeException} thrown when staff resources are not found.
  */
-public class AppImagesNotFoundException extends AbstractPlatformResourceNotFoundException {
+public class ContactInfoNotFoundException extends AbstractPlatformResourceNotFoundException {
 
-    public AppImagesNotFoundException(final Long id) {
-        super("error.msg.app.images.id.invalid", "App Images with identifier " + id + " does not exist", id);
+    public ContactInfoNotFoundException(final Long id) {
+        super("error.msg.contact.info.id.invalid", "Contact Info with identifier " + id + " does not exist", id);
+    }
+
+    public ContactInfoNotFoundException() {
+        super("error.msg.contact.info.not.found", "Contact Info not found");
     }
 }

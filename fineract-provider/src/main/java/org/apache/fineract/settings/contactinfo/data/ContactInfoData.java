@@ -16,10 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.settings.office.domain;
+package org.apache.fineract.settings.contactinfo.data;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import lombok.Getter;
 
-public interface AppImagesRepository extends JpaRepository<AppImage, Long> {
+@Getter
+public class ContactInfoData {
+
+    private final Long id;
+    private final String email;
+    private final String mobileNo;
+    private final String website;
+
+    public ContactInfoData(Long id, String email, String mobileNo, String website) {
+        this.id = id;
+        this.email = email;
+        this.mobileNo = mobileNo;
+        this.website = website;
+    }
+
+    public static ContactInfoData instance(Long id, String email, String mobileNo, String website) {
+        return new ContactInfoData(id, email, mobileNo, website);
+    }
+
 
 }
