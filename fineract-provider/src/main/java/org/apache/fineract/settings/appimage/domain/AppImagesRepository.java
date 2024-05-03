@@ -16,25 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.settings.office.domain;
+package org.apache.fineract.settings.appimage.domain;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
-import org.apache.fineract.infrastructure.documentmanagement.domain.Image;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-@Entity
-@Getter
-@Setter
-@Table(name = "m_app_image")
-public class AppImage extends AbstractPersistableCustom {
-
-    @Column(name = "app_image_name", length = 50)
-    private String appImageName;
-
-    @OneToOne(optional = true)
-    @JoinColumn(name = "image_id")
-    private Image image;
+public interface AppImagesRepository extends JpaRepository<AppImage, Long> {
 
 }
