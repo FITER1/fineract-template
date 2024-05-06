@@ -61,7 +61,8 @@ public class FileSystemContentRepository implements ContentRepository {
     }
 
     @Override
-    public String saveImage(final InputStream uploadedInputStream, final Long resourceId, final String imageName, final Long fileSize, String entityName) {
+    public String saveImage(final InputStream uploadedInputStream, final Long resourceId, final String imageName, final Long fileSize,
+            String entityName) {
         ContentRepositoryUtils.validateFileSizeWithinPermissibleRange(fileSize, imageName);
         final String fileLocation = generateClientImageParentDirectory(resourceId, entityName) + File.separator + imageName;
         return writeFileToFileSystem(imageName, uploadedInputStream, fileLocation);
