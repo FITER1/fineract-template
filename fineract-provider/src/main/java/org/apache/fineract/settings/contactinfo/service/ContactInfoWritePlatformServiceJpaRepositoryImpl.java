@@ -20,25 +20,16 @@ package org.apache.fineract.settings.contactinfo.service;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
-import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientNonPerson;
-import org.apache.fineract.portfolio.client.exception.ClientMustBePendingToBeDeletedException;
-import org.apache.fineract.portfolio.note.domain.Note;
 import org.apache.fineract.settings.contactinfo.data.ContactInfoDataValidator;
 import org.apache.fineract.settings.contactinfo.domain.ContactInfo;
 import org.apache.fineract.settings.contactinfo.domain.ContactInfoRepository;
 import org.apache.fineract.settings.contactinfo.exception.ContactInfoNotFoundException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Map;
 
 @AllArgsConstructor

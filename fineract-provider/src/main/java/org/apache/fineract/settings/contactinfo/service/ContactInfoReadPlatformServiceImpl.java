@@ -20,10 +20,7 @@ package org.apache.fineract.settings.contactinfo.service;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
-import org.apache.fineract.portfolio.charge.exception.ChargeNotFoundException;
 import org.apache.fineract.settings.contactinfo.data.ContactInfoData;
-import org.apache.fineract.settings.contactinfo.exception.ContactInfoNotFoundException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;

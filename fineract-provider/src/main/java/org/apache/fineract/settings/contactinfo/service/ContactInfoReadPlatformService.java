@@ -18,7 +18,6 @@
  */
 package org.apache.fineract.settings.contactinfo.service;
 
-import org.apache.fineract.portfolio.note.data.NoteData;
 import org.apache.fineract.settings.contactinfo.data.ContactInfoData;
 
 import java.util.Collection;
