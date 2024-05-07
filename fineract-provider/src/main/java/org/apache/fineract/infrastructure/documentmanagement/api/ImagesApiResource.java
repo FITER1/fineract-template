@@ -133,7 +133,6 @@ public class ImagesApiResource {
             this.context.authenticatedUser().validateHasReadPermission("APP");
         }
 
-
         final FileData imageData = this.imageReadPlatformService.retrieveImage(entityName, entityId);
         final FileData resizedImage = imageResizer.resize(imageData, maxWidth, maxHeight);
 

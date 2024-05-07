@@ -76,7 +76,8 @@ public class S3ContentRepository implements ContentRepository {
     }
 
     @Override
-    public String saveImage(final InputStream toUploadInputStream, final Long resourceId, final String imageName, final Long fileSize, String entityName) {
+    public String saveImage(final InputStream toUploadInputStream, final Long resourceId, final String imageName, final Long fileSize,
+            String entityName) {
         ContentRepositoryUtils.validateFileSizeWithinPermissibleRange(fileSize, imageName);
         final String uploadImageLocation = generateClientImageParentDirectory(resourceId, entityName);
         final String fileLocation = uploadImageLocation + File.separator + imageName;

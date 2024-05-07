@@ -18,28 +18,18 @@
  */
 package org.apache.fineract.settings.contactinfo.service;
 
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
-import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientNonPerson;
-import org.apache.fineract.portfolio.client.exception.ClientMustBePendingToBeDeletedException;
-import org.apache.fineract.portfolio.note.domain.Note;
 import org.apache.fineract.settings.contactinfo.data.ContactInfoDataValidator;
 import org.apache.fineract.settings.contactinfo.domain.ContactInfo;
 import org.apache.fineract.settings.contactinfo.domain.ContactInfoRepository;
 import org.apache.fineract.settings.contactinfo.exception.ContactInfoNotFoundException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Map;
 
 @AllArgsConstructor
 @Service
@@ -53,20 +43,20 @@ public class ContactInfoWritePlatformServiceJpaRepositoryImpl implements Contact
     @Override
     public CommandProcessingResult createContactInfo(final JsonCommand command) {
 
-            this.fromApiJsonDeserializer.validateForCreate(command.json());
+        this.fromApiJsonDeserializer.validateForCreate(command.json());
 
-            final String mobileNo = command.stringValueOfParameterNamed(ContactInfoDataValidator.mobileNoParamName);
-            final String emailAddress = command.stringValueOfParameterNamed(ContactInfoDataValidator.emailParamName);
-            final String website = command.stringValueOfParameterNamed(ContactInfoDataValidator.websiteParamName);
+        final String mobileNo = command.stringValueOfParameterNamed(ContactInfoDataValidator.mobileNoParamName);
+        final String emailAddress = command.stringValueOfParameterNamed(ContactInfoDataValidator.emailParamName);
+        final String website = command.stringValueOfParameterNamed(ContactInfoDataValidator.websiteParamName);
 
-            final ContactInfo newContactInfo = ContactInfo.instance(website, emailAddress, mobileNo);
+        final ContactInfo newContactInfo = ContactInfo.instance(website, emailAddress, mobileNo);
 
-            this.contactInfoRepository.saveAndFlush(newContactInfo);
+        this.contactInfoRepository.saveAndFlush(newContactInfo);
 
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .withClientId(newContactInfo.getId()) //
-                    .build();
+        return new CommandProcessingResultBuilder() //
+                .withCommandId(command.commandId()) //
+                .withClientId(newContactInfo.getId()) //
+                .build();
     }
 
     @Override
@@ -83,11 +73,7 @@ public class ContactInfoWritePlatformServiceJpaRepositoryImpl implements Contact
             this.contactInfoRepository.saveAndFlush(contactInfoForUpdate);
         }
 
-        return new CommandProcessingResultBuilder()
-                .withCommandId(command.commandId())
-                .withEntityId(contactInfoId)
-                .with(changes)
-                .build();
+        return new CommandProcessingResultBuilder().withCommandId(command.commandId()).withEntityId(contactInfoId).with(changes).build();
     }
 
     @Override
@@ -95,8 +81,7 @@ public class ContactInfoWritePlatformServiceJpaRepositoryImpl implements Contact
 
         this.contactInfoRepository.deleteAll();
         this.contactInfoRepository.flush();
-        return new CommandProcessingResultBuilder()
-                    .build();
-        }
+        return new CommandProcessingResultBuilder().build();
+    }
 
 }

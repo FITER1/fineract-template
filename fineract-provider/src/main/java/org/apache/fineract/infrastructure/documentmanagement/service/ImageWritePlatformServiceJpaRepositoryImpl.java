@@ -49,8 +49,8 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
 
     @Autowired
     public ImageWritePlatformServiceJpaRepositoryImpl(final ContentRepositoryFactory documentStoreFactory,
-                                                      final ClientRepositoryWrapper clientRepositoryWrapper, final ImageRepository imageRepository,
-                                                      StaffRepositoryWrapper staffRepositoryWrapper, AppImagesRepository appImagesRepository) {
+            final ClientRepositoryWrapper clientRepositoryWrapper, final ImageRepository imageRepository,
+            StaffRepositoryWrapper staffRepositoryWrapper, AppImagesRepository appImagesRepository) {
         this.contentRepositoryFactory = documentStoreFactory;
         this.clientRepositoryWrapper = clientRepositoryWrapper;
         this.imageRepository = imageRepository;
@@ -134,8 +134,7 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             Staff staff = this.staffRepositoryWrapper.findOneWithNotFoundDetection(entityId);
             image = staff.getImage();
             owner = staff;
-        }
-        else if (EntityTypeForImages.APP.toString().equals(entityName)) {
+        } else if (EntityTypeForImages.APP.toString().equals(entityName)) {
             AppImage appImages = this.appImagesRepository.findById(entityId).orElseThrow(() -> new AppImagesNotFoundException(entityId));
             image = appImages.getImage();
             owner = appImages;

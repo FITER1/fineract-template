@@ -18,7 +18,6 @@
  */
 package org.apache.fineract.settings.contactinfo.api;
 
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,10 +25,21 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
@@ -43,18 +53,12 @@ import org.apache.fineract.settings.contactinfo.data.ContactInfoData;
 import org.apache.fineract.settings.contactinfo.service.ContactInfoReadPlatformService;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-
 @Path("/v1/contactinfo")
 @Component
 @RequiredArgsConstructor
 public class ContactInfoAPIResource {
 
-    private static final Set<String> CONTACT_INFO_DATA_PARAMETERS = new HashSet<>(
-            Arrays.asList("id", "email", "mobileNo", "website"));
+    private static final Set<String> CONTACT_INFO_DATA_PARAMETERS = new HashSet<>(Arrays.asList("id", "email", "mobileNo", "website"));
 
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
     private final ApiRequestParameterHelper apiRequestParameterHelper;
@@ -99,11 +103,11 @@ public class ContactInfoAPIResource {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = ContactInfoData.class))) })
     public String updateContactInfo(@PathParam("contactInfoId") @Parameter(description = "contactInfoId") final Long contactInfoId,
-                                    @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+            @Parameter(hidden = true) final String apiRequestBodyAsJson) {
         this.context.authenticatedUser().validateHasReadPermission("CONTACTINFO");
 
-        final CommandWrapper commandRequest = new CommandWrapperBuilder().updateContactInfo(contactInfoId)
-                .withJson(apiRequestBodyAsJson).build();
+        final CommandWrapper commandRequest = new CommandWrapperBuilder().updateContactInfo(contactInfoId).withJson(apiRequestBodyAsJson)
+                .build();
 
         final CommandProcessingResult result = this.commandsSourceWritePlatformService.logCommandSource(commandRequest);
 
