@@ -165,7 +165,7 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             this.staffRepositoryWrapper.save(staff);
         } else if (owner instanceof AppImage appImages) {
             image = appImages.getImage();
-            clientId = appImages.getId();
+            clientId = (Long) appImages.getId();
             image = createImage(image, imageLocation, storageType);
             appImages.setImage(image);
             this.appImagesRepository.save(appImages);
