@@ -130,8 +130,8 @@ public class ImagesApiResource {
         } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityName)) {
             this.context.authenticatedUser().validateHasReadPermission("STAFFIMAGE");
         } else if (EntityTypeForImages.APP.toString().equalsIgnoreCase(entityName)) {
-        this.context.authenticatedUser().validateHasReadPermission("APP");
-    }
+            this.context.authenticatedUser().validateHasReadPermission("APP");
+        }
 
         final FileData imageData = this.imageReadPlatformService.retrieveImage(entityName, entityId);
         final FileData resizedImage = imageResizer.resize(imageData, maxWidth, maxHeight);
@@ -209,7 +209,7 @@ public class ImagesApiResource {
     /*** Entities for document Management **/
     public enum EntityTypeForImages {
 
-        STAFF, CLIENTS,APP;
+        STAFF, CLIENTS, APP;
 
         @Override
         public String toString() {

@@ -20,6 +20,13 @@ package org.apache.fineract.settings.contactinfo.data;
 
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
@@ -28,14 +35,6 @@ import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidati
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 @Component
 public final class ContactInfoDataValidator {
@@ -49,8 +48,7 @@ public final class ContactInfoDataValidator {
     static final Set<String> supportedParameters = new HashSet<>(Arrays.asList("website", "email", "mobileNo"));
 
     @Autowired
-    public ContactInfoDataValidator(final FromJsonHelper fromApiJsonHelper
-    ) {
+    public ContactInfoDataValidator(final FromJsonHelper fromApiJsonHelper) {
         this.fromApiJsonHelper = fromApiJsonHelper;
     }
 
@@ -61,29 +59,24 @@ public final class ContactInfoDataValidator {
         }
 
         final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
-        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json,
-                supportedParameters);
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, supportedParameters);
         final JsonElement element = this.fromApiJsonHelper.parse(json);
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
 
-        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
-                .resource("ContactInfo");
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("ContactInfo");
 
         if (this.fromApiJsonHelper.parameterExists(mobileNoParamName, element)) {
             final String mobileNo = this.fromApiJsonHelper.extractStringNamed(mobileNoParamName, element);
-            baseDataValidator.reset().parameter(mobileNoParamName).value(mobileNo).ignoreIfNull()
-                    .notExceedingLengthOf(50);
+            baseDataValidator.reset().parameter(mobileNoParamName).value(mobileNo).ignoreIfNull().notExceedingLengthOf(50);
         }
         if (this.fromApiJsonHelper.parameterExists(emailParamName, element)) {
             final String email = this.fromApiJsonHelper.extractStringNamed(emailParamName, element);
-            baseDataValidator.reset().parameter(emailParamName).value(email).ignoreIfNull()
-                    .notExceedingLengthOf(100);
+            baseDataValidator.reset().parameter(emailParamName).value(email).ignoreIfNull().notExceedingLengthOf(100);
         }
         if (this.fromApiJsonHelper.parameterExists(websiteParamName, element)) {
             final String website = this.fromApiJsonHelper.extractStringNamed(websiteParamName, element);
-            baseDataValidator.reset().parameter(websiteParamName).value(website).ignoreIfNull()
-                    .notExceedingLengthOf(100);
+            baseDataValidator.reset().parameter(websiteParamName).value(website).ignoreIfNull().notExceedingLengthOf(100);
         }
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);
@@ -101,29 +94,24 @@ public final class ContactInfoDataValidator {
         }
 
         final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
-        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json,
-                supportedParameters);
+        this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, supportedParameters);
         final JsonElement element = this.fromApiJsonHelper.parse(json);
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
 
-        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
-                .resource("ContactInfo");
+        final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("ContactInfo");
 
         if (this.fromApiJsonHelper.parameterExists(mobileNoParamName, element)) {
             final String mobileNo = this.fromApiJsonHelper.extractStringNamed(mobileNoParamName, element);
-            baseDataValidator.reset().parameter(mobileNoParamName).value(mobileNo).ignoreIfNull()
-                    .notExceedingLengthOf(50);
+            baseDataValidator.reset().parameter(mobileNoParamName).value(mobileNo).ignoreIfNull().notExceedingLengthOf(50);
         }
         if (this.fromApiJsonHelper.parameterExists(emailParamName, element)) {
             final String email = this.fromApiJsonHelper.extractStringNamed(emailParamName, element);
-            baseDataValidator.reset().parameter(emailParamName).value(email).ignoreIfNull()
-                    .notExceedingLengthOf(100);
+            baseDataValidator.reset().parameter(emailParamName).value(email).ignoreIfNull().notExceedingLengthOf(100);
         }
         if (this.fromApiJsonHelper.parameterExists(websiteParamName, element)) {
             final String website = this.fromApiJsonHelper.extractStringNamed(websiteParamName, element);
-            baseDataValidator.reset().parameter(websiteParamName).value(website).ignoreIfNull()
-                    .notExceedingLengthOf(100);
+            baseDataValidator.reset().parameter(websiteParamName).value(website).ignoreIfNull().notExceedingLengthOf(100);
         }
 
         throwExceptionIfValidationWarningsExist(dataValidationErrors);

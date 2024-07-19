@@ -39,5 +39,4 @@ public class ContactInfoData {
         return new ContactInfoData(id, email, mobileNo, website);
     }
 
-
 }

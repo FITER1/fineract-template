@@ -3714,6 +3714,7 @@ public class CommandWrapperBuilder {
         this.href = "/loans/" + loanId + "/delinquency-action";
         return this;
     }
+
     public CommandWrapperBuilder createContactInfo() {
         this.actionName = "CREATE";
         this.entityName = "CONTACTINFO";

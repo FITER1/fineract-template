@@ -18,15 +18,15 @@
  */
 package org.apache.fineract.settings.contactinfo.service;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.domain.JdbcSupport;
 import org.apache.fineract.settings.contactinfo.data.ContactInfoData;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Collection;
 
 @Service
 @RequiredArgsConstructor
@@ -46,8 +46,7 @@ public class ContactInfoReadPlatformServiceImpl implements ContactInfoReadPlatfo
     private static final class ContactInfoMapper implements RowMapper<ContactInfoData> {
 
         public String schema() {
-            return " select ci.id as id, ci.email as email, ci.mobile_no as mobileNo, ci.website as website"
-                    + " from m_contact_info ci";
+            return " select ci.id as id, ci.email as email, ci.mobile_no as mobileNo, ci.website as website" + " from m_contact_info ci";
         }
 
         @Override

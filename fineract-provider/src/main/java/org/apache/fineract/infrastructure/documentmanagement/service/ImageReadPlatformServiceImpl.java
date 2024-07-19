@@ -52,7 +52,8 @@ public class ImageReadPlatformServiceImpl implements ImageReadPlatformService {
 
     @Autowired
     public ImageReadPlatformServiceImpl(final JdbcTemplate jdbcTemplate, final ContentRepositoryFactory documentStoreFactory,
-                                        final ClientRepositoryWrapper clientRepositoryWrapper, StaffRepositoryWrapper staffRepositoryWrapper, AppImagesRepository appImagesRepository) {
+            final ClientRepositoryWrapper clientRepositoryWrapper, StaffRepositoryWrapper staffRepositoryWrapper,
+            AppImagesRepository appImagesRepository) {
         this.staffRepositoryWrapper = staffRepositoryWrapper;
         this.jdbcTemplate = jdbcTemplate;
         this.contentRepositoryFactory = documentStoreFactory;
@@ -75,8 +76,7 @@ public class ImageReadPlatformServiceImpl implements ImageReadPlatformService {
                 builder.append(" from m_image image , m_client client " + " where client.image_id = image.id and client.id=?");
             } else if (EntityTypeForImages.STAFF.toString().equalsIgnoreCase(entityType)) {
                 builder.append("from m_image image , m_staff staff " + " where staff.image_id = image.id and staff.id=?");
-            }
-            else if (EntityTypeForImages.APP.toString().equalsIgnoreCase(entityType)) {
+            } else if (EntityTypeForImages.APP.toString().equalsIgnoreCase(entityType)) {
                 builder.append("from m_image image , m_app_image appImage " + " where appImage.image_id = image.id and appImage.id=?");
             }
             return builder.toString();
