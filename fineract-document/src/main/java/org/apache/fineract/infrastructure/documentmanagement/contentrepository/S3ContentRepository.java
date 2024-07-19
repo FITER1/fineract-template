@@ -76,9 +76,10 @@ public class S3ContentRepository implements ContentRepository {
     }
 
     @Override
-    public String saveImage(final InputStream toUploadInputStream, final Long resourceId, final String imageName, final Long fileSize) {
+    public String saveImage(final InputStream toUploadInputStream, final Long resourceId, final String imageName, final Long fileSize,
+            String entityName) {
         ContentRepositoryUtils.validateFileSizeWithinPermissibleRange(fileSize, imageName);
-        final String uploadImageLocation = generateClientImageParentDirectory(resourceId);
+        final String uploadImageLocation = generateClientImageParentDirectory(resourceId, entityName);
         final String fileLocation = uploadImageLocation + File.separator + imageName;
 
         putObject(imageName, toUploadInputStream, fileLocation);
@@ -86,8 +87,8 @@ public class S3ContentRepository implements ContentRepository {
     }
 
     @Override
-    public String saveImage(final Base64EncodedImage base64EncodedImage, final Long resourceId, final String imageName) {
-        final String uploadImageLocation = generateClientImageParentDirectory(resourceId);
+    public String saveImage(final Base64EncodedImage base64EncodedImage, final Long resourceId, final String imageName, String entityName) {
+        final String uploadImageLocation = generateClientImageParentDirectory(resourceId, entityName);
         final String fileLocation = uploadImageLocation + File.separator + imageName + base64EncodedImage.getFileExtension();
         final InputStream toUploadInputStream = new ByteArrayInputStream(
                 Base64.getMimeDecoder().decode(base64EncodedImage.getBase64EncodedString()));
@@ -135,8 +136,8 @@ public class S3ContentRepository implements ContentRepository {
                 + ContentRepositoryUtils.generateRandomString();
     }
 
-    private String generateClientImageParentDirectory(final Long resourceId) {
-        return "images" + File.separator + "clients" + File.separator + resourceId;
+    private String generateClientImageParentDirectory(final Long resourceId, String entityName) {
+        return "images" + File.separator + entityName + File.separator + resourceId;
     }
 
     private void deleteObject(final String location) {

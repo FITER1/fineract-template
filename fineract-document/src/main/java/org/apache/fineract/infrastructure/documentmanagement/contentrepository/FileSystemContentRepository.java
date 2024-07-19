@@ -61,15 +61,16 @@ public class FileSystemContentRepository implements ContentRepository {
     }
 
     @Override
-    public String saveImage(final InputStream uploadedInputStream, final Long resourceId, final String imageName, final Long fileSize) {
+    public String saveImage(final InputStream uploadedInputStream, final Long resourceId, final String imageName, final Long fileSize,
+            String entityName) {
         ContentRepositoryUtils.validateFileSizeWithinPermissibleRange(fileSize, imageName);
-        final String fileLocation = generateClientImageParentDirectory(resourceId) + File.separator + imageName;
+        final String fileLocation = generateClientImageParentDirectory(resourceId, entityName) + File.separator + imageName;
         return writeFileToFileSystem(imageName, uploadedInputStream, fileLocation);
     }
 
     @Override
-    public String saveImage(final Base64EncodedImage base64EncodedImage, final Long resourceId, final String imageName) {
-        final String fileLocation = generateClientImageParentDirectory(resourceId) + File.separator + imageName
+    public String saveImage(final Base64EncodedImage base64EncodedImage, final Long resourceId, final String imageName, String entityName) {
+        final String fileLocation = generateClientImageParentDirectory(resourceId, entityName) + File.separator + imageName
                 + base64EncodedImage.getFileExtension();
         String base64EncodedImageString = base64EncodedImage.getBase64EncodedString();
         try {
@@ -136,10 +137,10 @@ public class FileSystemContentRepository implements ContentRepository {
      * Generate ContentRepositoryUtilsfineractProperties.getContentgetWhitelist()getBlacklist() path for storing new
      * Image
      */
-    private String generateClientImageParentDirectory(final Long resourceId) {
+    private String generateClientImageParentDirectory(final Long resourceId, final String entityName) {
         return fineractProperties.getContent().getFilesystem().getRootFolder() + File.separator
                 + ThreadLocalContextUtil.getTenant().getName().replaceAll(" ", "").trim() + File.separator + "images" + File.separator
-                + "clients" + File.separator + resourceId;
+                + entityName + File.separator + resourceId;
     }
 
     /**

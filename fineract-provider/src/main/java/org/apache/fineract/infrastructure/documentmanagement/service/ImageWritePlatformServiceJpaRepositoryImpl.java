@@ -31,6 +31,9 @@ import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.organisation.staff.domain.StaffRepositoryWrapper;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
+import org.apache.fineract.settings.appimage.domain.AppImage;
+import org.apache.fineract.settings.appimage.domain.AppImagesRepository;
+import org.apache.fineract.settings.appimage.exception.AppImagesNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,15 +45,17 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
     private final ClientRepositoryWrapper clientRepositoryWrapper;
     private final ImageRepository imageRepository;
     private final StaffRepositoryWrapper staffRepositoryWrapper;
+    private final AppImagesRepository appImagesRepository;
 
     @Autowired
     public ImageWritePlatformServiceJpaRepositoryImpl(final ContentRepositoryFactory documentStoreFactory,
             final ClientRepositoryWrapper clientRepositoryWrapper, final ImageRepository imageRepository,
-            StaffRepositoryWrapper staffRepositoryWrapper) {
+            StaffRepositoryWrapper staffRepositoryWrapper, AppImagesRepository appImagesRepository) {
         this.contentRepositoryFactory = documentStoreFactory;
         this.clientRepositoryWrapper = clientRepositoryWrapper;
         this.imageRepository = imageRepository;
         this.staffRepositoryWrapper = staffRepositoryWrapper;
+        this.appImagesRepository = appImagesRepository;
     }
 
     @Transactional
@@ -60,7 +65,7 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
         Object owner = deletePreviousImage(entityName, clientId);
 
         final ContentRepository contentRepository = this.contentRepositoryFactory.getRepository();
-        final String imageLocation = contentRepository.saveImage(inputStream, clientId, imageName, fileSize);
+        final String imageLocation = contentRepository.saveImage(inputStream, clientId, imageName, fileSize, entityName);
         return updateImage(owner, imageLocation, contentRepository.getStorageType());
     }
 
@@ -70,7 +75,7 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
         Object owner = deletePreviousImage(entityName, clientId);
 
         final ContentRepository contenRepository = this.contentRepositoryFactory.getRepository();
-        final String imageLocation = contenRepository.saveImage(encodedImage, clientId, "image");
+        final String imageLocation = contenRepository.saveImage(encodedImage, clientId, "image", entityName);
 
         return updateImage(owner, imageLocation, contenRepository.getStorageType());
     }
@@ -93,6 +98,13 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             image = staff.getImage();
             staff.setImage(null);
             this.staffRepositoryWrapper.save(staff);
+
+        } else if (EntityTypeForImages.APP.toString().equals(entityName)) {
+            owner = this.appImagesRepository.findById(clientId).orElseThrow(() -> new AppImagesNotFoundException(clientId));
+            AppImage appImages = (AppImage) owner;
+            image = appImages.getImage();
+            appImages.setImage(null);
+            this.appImagesRepository.save(appImages);
 
         }
         // delete image from the file system
@@ -122,6 +134,10 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             Staff staff = this.staffRepositoryWrapper.findOneWithNotFoundDetection(entityId);
             image = staff.getImage();
             owner = staff;
+        } else if (EntityTypeForImages.APP.toString().equals(entityName)) {
+            AppImage appImages = this.appImagesRepository.findById(entityId).orElseThrow(() -> new AppImagesNotFoundException(entityId));
+            image = appImages.getImage();
+            owner = appImages;
         }
         if (image != null) {
             final ContentRepository contentRepository = this.contentRepositoryFactory
@@ -146,6 +162,12 @@ public class ImageWritePlatformServiceJpaRepositoryImpl implements ImageWritePla
             image = createImage(image, imageLocation, storageType);
             staff.setImage(image);
             this.staffRepositoryWrapper.save(staff);
+        } else if (owner instanceof AppImage appImages) {
+            image = appImages.getImage();
+            clientId = (Long) appImages.getId();
+            image = createImage(image, imageLocation, storageType);
+            appImages.setImage(image);
+            this.appImagesRepository.save(appImages);
         }
 
         if (image != null) {

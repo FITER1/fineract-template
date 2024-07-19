@@ -42,7 +42,7 @@ import org.springframework.data.domain.Persistable;
  * {@link jakarta.persistence.GenerationType#IDENTITY}.
  *
  * The {@link #equals(Object)} and {@link #hashCode()} methods are NOT implemented here, which is untypical for JPA
- * (it's usually implemented based on the Id), because "we end up with issues on OpenJPA" (TODO clarify this).
+ * (it's usually implemented based on the Id), because "we end up with issues on OpenJPA "
  */
 @MappedSuperclass
 @Getter

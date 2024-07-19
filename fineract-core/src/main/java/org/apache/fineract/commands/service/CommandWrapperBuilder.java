@@ -3714,4 +3714,26 @@ public class CommandWrapperBuilder {
         this.href = "/loans/" + loanId + "/delinquency-action";
         return this;
     }
+
+    public CommandWrapperBuilder createContactInfo() {
+        this.actionName = "CREATE";
+        this.entityName = "CONTACTINFO";
+        this.href = "/contactinfo/create";
+        return this;
+    }
+
+    public CommandWrapperBuilder updateContactInfo(Long id) {
+        this.actionName = "UPDATE";
+        this.entityName = "CONTACTINFO";
+        this.entityId = id;
+        this.href = "/contactinfo/" + id;
+        return this;
+    }
+
+    public CommandWrapperBuilder deleteContactInfo() {
+        this.actionName = "DELETE";
+        this.entityName = "CONTACTINFO";
+        this.href = "/contactinfo";
+        return this;
+    }
 }
