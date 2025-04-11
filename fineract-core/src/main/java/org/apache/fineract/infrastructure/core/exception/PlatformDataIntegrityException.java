@@ -37,6 +37,11 @@ public class PlatformDataIntegrityException extends AbstractPlatformException {
         this.parameterName = parameterName;
     }
 
+    public PlatformDataIntegrityException(final String globalisationMessageCode, final String defaultUserMessage, Throwable t) {
+        super(globalisationMessageCode, defaultUserMessage, t);
+        this.parameterName = null;
+    }
+
     public String getParameterName() {
         return this.parameterName;
     }

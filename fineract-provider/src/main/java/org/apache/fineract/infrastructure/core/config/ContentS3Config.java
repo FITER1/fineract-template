@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 @Slf4j
@@ -34,8 +35,9 @@ public class ContentS3Config {
     @Bean
     @ConditionalOnProperty("fineract.content.s3.enabled")
     public S3Client contentS3Client(FineractProperties fineractProperties) {
-        return S3Client.builder().credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials
-                .create(fineractProperties.getContent().getS3().getAccessKey(), fineractProperties.getContent().getS3().getSecretKey())))
-                .build();
+        return S3Client.builder()
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(
+                        fineractProperties.getContent().getS3().getAccessKey(), fineractProperties.getContent().getS3().getSecretKey())))
+                .region(Region.of(fineractProperties.getContent().getS3().getRegion())).build();
     }
 }

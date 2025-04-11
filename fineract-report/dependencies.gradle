@@ -49,6 +49,10 @@ dependencies {
 
             'io.github.resilience4j:resilience4j-spring-boot3',
             'org.apache.httpcomponents:httpcore',
+            fileTree('thirdparty') {
+                include '*.jar'
+            },
+            'org.apache.groovy:groovy-all:4.0.12',
             )
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
