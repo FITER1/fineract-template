@@ -224,9 +224,10 @@ public class DepositAccountReadPlatformServiceImpl implements DepositAccountRead
         sqlBuilder.append(this.depositAccountForMaturityRowMapper.schema());
         sqlBuilder.append(" WHERE da.deposit_type_enum in (?, ?) and da.status_enum = ?");
 
+        LocalDate today = DateUtils.getBusinessLocalDate();
         return this.jdbcTemplate.query(sqlBuilder.toString(), this.depositAccountForMaturityRowMapper,
-                new Object[] { DepositAccountType.FIXED_DEPOSIT.getValue(), DepositAccountType.RECURRING_DEPOSIT.getValue(),
-                        SavingsAccountStatusType.ACTIVE.getValue() });
+                new Object[] { java.sql.Date.valueOf(today), DepositAccountType.FIXED_DEPOSIT.getValue(),
+                        DepositAccountType.RECURRING_DEPOSIT.getValue(), SavingsAccountStatusType.ACTIVE.getValue() });
     }
 
     @Override
@@ -525,7 +526,7 @@ public class DepositAccountReadPlatformServiceImpl implements DepositAccountRead
 
     @Override
     public Collection<Map<String, Object>> retriveDataForRDScheduleCreation() {
-        String today = formatter.format(DateUtils.getBusinessLocalDate());
+        LocalDate today = DateUtils.getBusinessLocalDate();
         final StringBuilder sb = new StringBuilder(300);
         sb.append(" select rd.savings_account_id savingsId, rd.mandatory_recommended_deposit_amount as amount,");
         sb.append(" mc.recurrence as recurrence ,");
@@ -536,13 +537,13 @@ public class DepositAccountReadPlatformServiceImpl implements DepositAccountRead
         sb.append(" inner join m_deposit_account_recurring_detail rd on rd.savings_account_id = dat.savings_account_id ");
         sb.append(" inner join m_calendar_instance mci on mci.entity_type_enum = ? and mci.entity_id = dat.savings_account_id  ");
         sb.append(" inner join m_calendar mc  on mc.id = mci.calendar_id and mc.calendar_type_enum = ?");
-        sb.append(" inner join m_mandatory_savings_schedule ms on ms.savings_account_id = dat.savings_account_id and ms.duedate > '" + today
-                + "'");
+        sb.append(" inner join m_mandatory_savings_schedule ms on ms.savings_account_id = dat.savings_account_id and ms.duedate > ?");
         sb.append(" where dat.deposit_period is null");
         sb.append(" group by ms.savings_account_id, rd.mandatory_recommended_deposit_amount, mc.recurrence, rd.savings_account_id");
 
-        return this.jdbcTemplate.queryForList(sb.toString(), SavingsAccountStatusType.ACTIVE.getValue(),
-                CalendarEntityType.SAVINGS.getValue(), CalendarType.COLLECTION.getValue());
+        return this.jdbcTemplate.queryForList(sb.toString(),
+                SavingsAccountStatusType.ACTIVE.getValue(), CalendarEntityType.SAVINGS.getValue(),
+                CalendarType.COLLECTION.getValue(), java.sql.Date.valueOf(today));
     }
 
     private abstract static class DepositAccountMapper implements RowMapper<DepositAccountData> {
@@ -1409,18 +1410,14 @@ public class DepositAccountReadPlatformServiceImpl implements DepositAccountRead
 
     private static final class DepositAccountForMaturityMapper implements RowMapper<DepositAccountData> {
 
-        private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
         public String schema() {
-            LocalDate today = DateUtils.getBusinessLocalDate();
-            String formattedToday = formatter.format(today);
             final StringBuilder sqlBuilder = new StringBuilder(200);
             sqlBuilder.append("da.id as id, ");
             sqlBuilder.append("da.account_no as accountNumber, ");
             sqlBuilder.append("da.deposit_type_enum as depositTypeId ");
             sqlBuilder.append("FROM m_savings_account da ");
             sqlBuilder.append("inner join m_deposit_account_term_and_preclosure dat on dat.savings_account_id = da.id ");
-            sqlBuilder.append("and dat.maturity_date is not null and dat.maturity_date <= '" + formattedToday + "' ");
+            sqlBuilder.append("and dat.maturity_date is not null and dat.maturity_date <= ? ");
 
             return sqlBuilder.toString();
         }
