@@ -48,6 +48,9 @@ dependencies {
             'org.mapstruct:mapstruct',
 
             'io.github.resilience4j:resilience4j-spring-boot3',
+            fileTree('thirdparty') {
+                include '*.jar'
+            },
             'org.apache.httpcomponents:httpcore',
             )
     compileOnly 'org.projectlombok:lombok'
