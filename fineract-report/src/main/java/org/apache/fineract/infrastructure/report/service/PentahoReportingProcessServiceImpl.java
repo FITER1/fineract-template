@@ -18,8 +18,23 @@
  */
 package org.apache.fineract.infrastructure.report.service;
 
+import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toJdbcUrl;
+import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toProtocol;
+
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.sql.Date;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import javax.sql.DataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.api.ApiParameterHelper;
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
@@ -31,7 +46,11 @@ import org.apache.fineract.infrastructure.core.service.database.DatabasePassword
 import org.apache.fineract.infrastructure.dataqueries.data.ReportExportType;
 import org.apache.fineract.infrastructure.report.annotation.ReportService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.pentaho.reporting.engine.classic.core.*;
+import org.pentaho.reporting.engine.classic.core.ClassicEngineBoot;
+import org.pentaho.reporting.engine.classic.core.CompoundDataFactory;
+import org.pentaho.reporting.engine.classic.core.DataFactory;
+import org.pentaho.reporting.engine.classic.core.DefaultReportEnvironment;
+import org.pentaho.reporting.engine.classic.core.MasterReport;
 import org.pentaho.reporting.engine.classic.core.modules.misc.datafactory.sql.DriverConnectionProvider;
 import org.pentaho.reporting.engine.classic.core.modules.misc.datafactory.sql.SQLReportDataFactory;
 import org.pentaho.reporting.engine.classic.core.modules.output.pageable.pdf.PdfReportUtil;
@@ -50,18 +69,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
-import javax.sql.DataSource;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-
-import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toJdbcUrl;
-import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toProtocol;
-
 @Service
 @ReportService(type = "Pentaho")
 public class PentahoReportingProcessServiceImpl implements ReportingProcessService {
@@ -70,7 +77,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
     private final String mifosBaseDir = System.getProperty("user.home") + File.separator + ".mifosx";
     private final DatabasePasswordEncryptor databasePasswordEncryptor;
 
-    @Value("${FINERACT_PENTAHO_REPORTS_PATH:/pentahoReports}")
+    @Value("${FINERACT_PENTAHO_REPORTS_PATH:/root/.mifosx/pentahoReports}")
     private String fineractPentahoBaseDir;
 
     private final PlatformSecurityContext context;
@@ -281,9 +288,9 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
                         logger.debug("ParamValue: {}", pValue.toString());
                         String myDate = pValue.toString();
                         SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy", Locale.ENGLISH);
-                        Date date = sdf.parse(myDate);
+                        java.util.Date date = sdf.parse(myDate);
                         long millis = date.getTime();
-                        java.sql.Date mySQLDate = new java.sql.Date(millis);
+                        Date mySQLDate = new Date(millis);
                         rptParamValues.put(paramName, mySQLDate);
                     } else {
                         logger.debug("ParamName Unknown: {}", paramName);
