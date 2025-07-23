@@ -57,11 +57,13 @@ import java.sql.Date;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toJdbcUrl;
 import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toProtocol;
@@ -71,10 +73,10 @@ import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTen
 public class PentahoReportingProcessServiceImpl implements ReportingProcessService {
 
     private static final Logger logger = LoggerFactory.getLogger(PentahoReportingProcessServiceImpl.class);
-    private final String mifosBaseDir = System.getProperty("user.home") + File.separator + ".mifosx";
+    private final String mifosBaseDir = "./fineract-report/pentahoReportsPostgres";
     private final DatabasePasswordEncryptor databasePasswordEncryptor;
 
-    @Value("${FINERACT_PENTAHO_REPORTS_PATH:/root/.mifosx/pentahoReports}")
+    @Value("${FINERACT_PENTAHO_REPORTS_PATH:./fineract-report/pentahoReportsPostgres}")
     private String fineractPentahoBaseDir;
 
     private final PlatformSecurityContext context;
@@ -284,11 +286,44 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
                         logger.debug("ParamName: {}", paramName);
                         logger.debug("ParamValue: {}", pValue.toString());
                         String myDate = pValue.toString();
-                        SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy", Locale.ENGLISH);
-                        java.util.Date date = sdf.parse(myDate);
-                        long millis = date.getTime();
-                        Date mySQLDate = new Date(millis);
-                        rptParamValues.put(paramName, mySQLDate);
+
+                        try {
+                            // Try ISO date format first (yyyy-MM-dd)
+                            LocalDate localDate = LocalDate.parse(myDate, DateTimeFormatter.ISO_LOCAL_DATE);
+                            Date mySQLDate = Date.valueOf(localDate);
+                            rptParamValues.put(paramName, mySQLDate);
+                        } catch (DateTimeParseException e1) {
+                            try {
+                                // Fallback to other common formats
+                                DateTimeFormatter[] formatters = {
+                                        DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.ENGLISH),
+                                        DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),
+                                        DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),
+                                        DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.ENGLISH)
+                                };
+
+                                LocalDate localDate = null;
+                                for (DateTimeFormatter formatter : formatters) {
+                                    try {
+                                        localDate = LocalDate.parse(myDate, formatter);
+                                        break;
+                                    } catch (DateTimeParseException e2) {
+                                        // Try next formatter
+                                    }
+                                }
+
+                                if (localDate == null) {
+                                    throw new PlatformDataIntegrityException("error.msg.invalid.date.format",
+                                            "Unable to parse date: " + myDate + " for parameter: " + paramName);
+                                }
+
+                                Date mySQLDate = Date.valueOf(localDate);
+                                rptParamValues.put(paramName, mySQLDate);
+                            } catch (Exception e2) {
+                                throw new PlatformDataIntegrityException("error.msg.invalid.date.format",
+                                        "Unable to parse date: " + myDate + " for parameter: " + paramName + ". Error: " + e2.getMessage());
+                            }
+                        }
                     } else {
                         logger.debug("ParamName Unknown: {}", paramName);
                         logger.debug("ParamValue Unknown: {}", pValue.toString());
