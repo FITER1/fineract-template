@@ -187,7 +187,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
         if (StringUtils.isNotBlank(fineractPentahoBaseDir)) {
             return this.fineractPentahoBaseDir + File.separator;
         }
-        return this.mifosBaseDir + File.separator + "pentahoReports" + File.separator;
+        return this.mifosBaseDir + File.separator + "pentahoReportsPostgres" + File.separator;
     }
 
     private void setConnectionDetail(DataFactory dataFactory) throws SQLException {
