@@ -15,7 +15,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-22.04
     env:
-      GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
+      DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
       AWS_REGION: ${{ secrets.FITER_AWS_REGION }}
       ECR_REPOSITORY: ${{ secrets.FITER_AWS_ECR_REPOSITORY }}
       IMAGE_TAG: ${{ github.sha }}
@@ -46,6 +46,5 @@ jobs:
 
       - name: Build and push the Docker image to ECR
         run: |
-          ./gradlew --no-daemon --console=plain :fineract-provider:jib -x test -x cucumber \
-            -Djib.to.image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+          ./gradlew --no-daemon --console=plain --info :fineract-provider:jib -x test -x cucumber             -Djib.to.image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             -Djib.from.platforms=linux/amd64,linux/arm64
