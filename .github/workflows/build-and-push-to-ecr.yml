@@ -3,7 +3,7 @@ name: Build and Push to AWS ECR
 on: 
   push:
     branches:
-      - FDC_60_Pentaho_report_to_demo_server
+      - demo-9-develop
   pull_request:
     branches:
       - demo-9-develop
