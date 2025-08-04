@@ -46,4 +46,4 @@ jobs:
 
       - name: Build and push the Docker image to ECR
         run: |
-          ./gradlew --no-daemon --console=plain :fineract-report:compileJava --stacktrace
+          ./gradlew --no-daemon --console=plain :fineract-provider:jib -x test -x cucumber             -Djib.to.image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}             -Djib.from.platforms=linux/amd64,linux/arm64
