@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
-      AWS_REGION: ${{ secrets.FITER_AWS_REGION }}
-      ECR_REPOSITORY: ${{ secrets.FITER_AWS_ECR_REPOSITORY }}
+      AWS_REGION: "us-east-2"
+      ECR_REPOSITORY: "fih-server"
       IMAGE_TAG: "latest"
 
     steps:
