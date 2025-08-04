@@ -18,22 +18,8 @@
  */
 package org.apache.fineract.infrastructure.report.service;
 
-import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toJdbcUrl;
-import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toProtocol;
-
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import javax.sql.DataSource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.fineract.infrastructure.core.api.ApiParameterHelper;
 import org.apache.fineract.infrastructure.core.config.FineractProperties;
@@ -45,11 +31,7 @@ import org.apache.fineract.infrastructure.core.service.database.DatabasePassword
 import org.apache.fineract.infrastructure.dataqueries.data.ReportExportType;
 import org.apache.fineract.infrastructure.report.annotation.ReportService;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.pentaho.reporting.engine.classic.core.ClassicEngineBoot;
-import org.pentaho.reporting.engine.classic.core.CompoundDataFactory;
-import org.pentaho.reporting.engine.classic.core.DataFactory;
-import org.pentaho.reporting.engine.classic.core.DefaultReportEnvironment;
-import org.pentaho.reporting.engine.classic.core.MasterReport;
+import org.pentaho.reporting.engine.classic.core.*;
 import org.pentaho.reporting.engine.classic.core.modules.misc.datafactory.sql.DriverConnectionProvider;
 import org.pentaho.reporting.engine.classic.core.modules.misc.datafactory.sql.SQLReportDataFactory;
 import org.pentaho.reporting.engine.classic.core.modules.output.pageable.pdf.PdfReportUtil;
@@ -68,15 +50,33 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.sql.Date;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
+import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toJdbcUrl;
+import static org.apache.fineract.infrastructure.core.domain.FineractPlatformTenantConnection.toProtocol;
+
 @Service
 @ReportService(type = "Pentaho")
 public class PentahoReportingProcessServiceImpl implements ReportingProcessService {
 
     private static final Logger logger = LoggerFactory.getLogger(PentahoReportingProcessServiceImpl.class);
-    private final String mifosBaseDir = System.getProperty("user.home") + File.separator + ".mifosx";
+    private final String mifosBaseDir = "./fineract-report/pentahoReportsPostgres";
     private final DatabasePasswordEncryptor databasePasswordEncryptor;
 
-    @Value("${FINERACT_PENTAHO_REPORTS_PATH:/root/.mifosx/pentahoReports}")
+    @Value("${FINERACT_PENTAHO_REPORTS_PATH:./fineract-report/pentahoReportsPostgres}")
     private String fineractPentahoBaseDir;
 
     private final PlatformSecurityContext context;
@@ -93,7 +93,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
 
     @Autowired
     public PentahoReportingProcessServiceImpl(final PlatformSecurityContext context,
-            final @Qualifier("hikariTenantDataSource") DataSource tenantDataSource, DatabasePasswordEncryptor databasePasswordEncryptor) {
+                                              final @Qualifier("hikariTenantDataSource") DataSource tenantDataSource, DatabasePasswordEncryptor databasePasswordEncryptor) {
         ClassicEngineBoot.getInstance().start();
         this.tenantDataSource = tenantDataSource;
         this.context = context;
@@ -179,7 +179,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
             }
         } catch (Throwable t) {
             logger.error("Pentaho failed", t);
-            throw new PlatformDataIntegrityException("error.msg.reporting.error", "Pentaho failed: " + t.getMessage(), t);
+            throw new PlatformDataIntegrityException("error.msg.reporting.error", "Pentaho failed: " + t.getMessage());
         }
     }
 
@@ -187,7 +187,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
         if (StringUtils.isNotBlank(fineractPentahoBaseDir)) {
             return this.fineractPentahoBaseDir + File.separator;
         }
-        return this.mifosBaseDir + File.separator + "pentahoReports" + File.separator;
+        return this.mifosBaseDir + File.separator + "pentahoReportsPostgres" + File.separator;
     }
 
     private void setConnectionDetail(DataFactory dataFactory) throws SQLException {
@@ -283,16 +283,49 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
                     } else if (clazz.getCanonicalName().equalsIgnoreCase("java.lang.Long")) {
                         rptParamValues.put(paramName, Long.parseLong(pValue));
                     } else if (clazz.getCanonicalName().equalsIgnoreCase("java.sql.Date")) {
-
+                        logger.debug("ParamName: {}", paramName);
                         logger.debug("ParamValue: {}", pValue.toString());
                         String myDate = pValue.toString();
-                        SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy", Locale.ENGLISH);
-                        java.util.Date date = sdf.parse(myDate);
-                        long millis = date.getTime();
-                        java.sql.Date mySQLDate = new java.sql.Date(millis);
-                        rptParamValues.put(paramName, mySQLDate);
-                    } else {
 
+                        try {
+                            // Try ISO date format first (yyyy-MM-dd)
+                            LocalDate localDate = LocalDate.parse(myDate, DateTimeFormatter.ISO_LOCAL_DATE);
+                            Date mySQLDate = Date.valueOf(localDate);
+                            rptParamValues.put(paramName, mySQLDate);
+                        } catch (DateTimeParseException e1) {
+                            try {
+                                // Fallback to other common formats
+                                DateTimeFormatter[] formatters = {
+                                        DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.ENGLISH),
+                                        DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),
+                                        DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),
+                                        DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.ENGLISH)
+                                };
+
+                                LocalDate localDate = null;
+                                for (DateTimeFormatter formatter : formatters) {
+                                    try {
+                                        localDate = LocalDate.parse(myDate, formatter);
+                                        break;
+                                    } catch (DateTimeParseException e2) {
+                                        // Try next formatter
+                                    }
+                                }
+
+                                if (localDate == null) {
+                                    throw new PlatformDataIntegrityException("error.msg.invalid.date.format",
+                                            "Unable to parse date: " + myDate + " for parameter: " + paramName);
+                                }
+
+                                Date mySQLDate = Date.valueOf(localDate);
+                                rptParamValues.put(paramName, mySQLDate);
+                            } catch (Exception e2) {
+                                throw new PlatformDataIntegrityException("error.msg.invalid.date.format",
+                                        "Unable to parse date: " + myDate + " for parameter: " + paramName + ". Error: " + e2.getMessage());
+                            }
+                        }
+                    } else {
+                        logger.debug("ParamName Unknown: {}", paramName);
                         logger.debug("ParamValue Unknown: {}", pValue.toString());
                         rptParamValues.put(paramName, pValue);
                     }
@@ -337,18 +370,23 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
 
         } catch (Throwable t) {
             logger.error("error.msg.reporting.error:", t);
-            throw new PlatformDataIntegrityException("error.msg.reporting.error ", t.getMessage(), t);
+            throw new PlatformDataIntegrityException("error.msg.reporting.error", t.getMessage());
         }
     }
 
     @Override
     public Map<String, String> getReportParams(final MultivaluedMap<String, String> queryParams) {
         final Map<String, String> reportParams = new HashMap<>();
-        queryParams.forEach((key, values) -> {
-            if (key.startsWith("R_")) {
-                reportParams.put(key.substring(2), values.get(0));
+        final var keys = queryParams.keySet();
+        String pKey;
+        String pValue;
+        for (final String k : keys) {
+            if (k.startsWith("R_")) {
+                pKey = k.substring(2);
+                pValue = queryParams.get(k).get(0);
+                reportParams.put(pKey, pValue);
             }
-        });
+        }
         return reportParams;
     }
 }
