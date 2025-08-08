@@ -106,7 +106,9 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
         final var reportParams = getReportParams(queryParams);
         final var locale = ApiParameterHelper.extractLocale(queryParams);
         final var language = "en";
-
+        logger.debug("*********************************************************************************");
+        logger.debug("********************************Demo  Server*************************************");
+        logger.debug("*********************************************************************************");
         var outputType = "HTML";
         if (StringUtils.isNotBlank(outputTypeParam)) {
             outputType = outputTypeParam;
