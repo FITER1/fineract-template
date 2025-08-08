@@ -108,7 +108,7 @@ public class PentahoReportingProcessServiceImpl implements ReportingProcessServi
         final var language = "en";
         logger.info("*********************************************************************************");
         logger.info("********************************Demo  Server*************************************");
-        logger.info("*********************************************************************************");
+        logger.info("************************************Reports*********************************************");
         var outputType = "HTML";
         if (StringUtils.isNotBlank(outputTypeParam)) {
             outputType = outputTypeParam;
