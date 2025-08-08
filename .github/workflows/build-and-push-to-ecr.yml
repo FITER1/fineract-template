@@ -18,7 +18,7 @@ jobs:
       DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
       AWS_REGION: ${{ secrets.FITER_AWS_REGION }}
       ECR_REPOSITORY: fih-server #${{ secrets.FITER_AWS_ECR_REPOSITORY }}
-      IMAGE_TAG: v1.10.0 #${{ github.sha }}
+      IMAGE_TAG: v1.10.1 #${{ github.sha }}
 
     steps:
       - name: Checkout Source Code
