@@ -15,7 +15,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-22.04
     env:
-      DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
+#      DEVELOCITY_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
       AWS_REGION: ${{ secrets.FITER_AWS_REGION }}
       ECR_REPOSITORY: fih-server #${{ secrets.FITER_AWS_ECR_REPOSITORY }}
       IMAGE_TAG: v1.10.1 #${{ github.sha }}
