@@ -18,7 +18,7 @@ jobs:
 
       AWS_REGION: ${{ secrets.FITER_AWS_REGION }}
       ECR_REPOSITORY: fih-server #${{ secrets.FITER_AWS_ECR_REPOSITORY }}
-      IMAGE_TAG: v1.10.2
+      IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout Source Code
