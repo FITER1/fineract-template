@@ -53,6 +53,7 @@ dependencies {
                 include '*.jar'
             },
             'org.apache.groovy:groovy-all:4.0.12',
+            'org.mozilla:rhino-engine:1.7.14'
             )
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
