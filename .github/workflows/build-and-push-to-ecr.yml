@@ -42,7 +42,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'zulu'
-          cache: gradle
+          
 
       - name: Build and push the Docker image to ECR
         run: |
