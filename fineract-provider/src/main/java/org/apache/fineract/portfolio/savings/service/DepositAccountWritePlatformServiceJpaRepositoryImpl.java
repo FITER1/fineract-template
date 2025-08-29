@@ -109,6 +109,7 @@ import org.apache.fineract.portfolio.savings.exception.DepositAccountTransaction
 import org.apache.fineract.portfolio.savings.exception.SavingsAccountTransactionNotFoundException;
 import org.apache.fineract.portfolio.savings.exception.TransactionUpdateNotAllowedException;
 import org.apache.fineract.useradministration.domain.AppUser;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -1297,7 +1298,7 @@ public class DepositAccountWritePlatformServiceJpaRepositoryImpl implements Depo
         postJournalEntries(account, existingTransactionIds, existingReversedTransactionIds);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Override
     public void updateMaturityDetails(Long depositAccountId, DepositAccountType depositAccountType) {
         final boolean isSavingsInterestPostingAtCurrentPeriodEnd = this.configurationDomainService
