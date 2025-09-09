@@ -18,9 +18,11 @@
  */
 package org.apache.fineract.portfolio.tax.data;
 
+import lombok.Data;
+
 import java.io.Serializable;
 import java.util.Collection;
-
+@Data
 public final class TaxGroupData implements Serializable {
 
     private final Long id;

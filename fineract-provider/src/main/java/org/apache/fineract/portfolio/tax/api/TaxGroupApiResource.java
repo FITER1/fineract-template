@@ -62,7 +62,7 @@ public class TaxGroupApiResource {
 
     private final PlatformSecurityContext context;
     private final TaxReadPlatformService readPlatformService;
-    private final DefaultToApiJsonSerializer<String> toApiJsonSerializer;
+    private final DefaultToApiJsonSerializer<TaxGroupData> toApiJsonSerializer;
     private final ApiRequestParameterHelper apiRequestParameterHelper;
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
 
@@ -96,9 +96,14 @@ public class TaxGroupApiResource {
     @Path("template")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    public TaxGroupData retrieveTemplate() {
-        context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
-        return readPlatformService.retrieveTaxGroupTemplate();
+    public String retrieveTemplate(@Context final UriInfo uriInfo) {
+
+        this.context.authenticatedUser().validateHasReadPermission(RESOURCE_NAME_FOR_PERMISSIONS);
+
+        final TaxGroupData taxGroupData = this.readPlatformService.retrieveTaxGroupTemplate();
+
+        final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
+        return this.toApiJsonSerializer.serialize(settings, taxGroupData);
     }
 
     @POST
