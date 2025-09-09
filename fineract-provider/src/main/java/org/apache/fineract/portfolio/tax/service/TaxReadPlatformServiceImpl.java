@@ -52,7 +52,9 @@ public class TaxReadPlatformServiceImpl implements TaxReadPlatformService {
     @Override
     public List<TaxComponentData> retrieveAllTaxComponents() {
         String sql = "select " + TAX_COMPONENT_MAPPER.getSchema();
-        return this.jdbcTemplate.query(sql, TAX_COMPONENT_MAPPER); // NOSONAR
+        return this.jdbcTemplate.query(
+                connection -> connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY),
+                TAX_COMPONENT_MAPPER);
     }
 
     @Override
