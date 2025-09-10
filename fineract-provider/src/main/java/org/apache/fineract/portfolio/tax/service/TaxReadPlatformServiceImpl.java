@@ -72,7 +72,9 @@ public class TaxReadPlatformServiceImpl implements TaxReadPlatformService {
     @Override
     public List<TaxGroupData> retrieveAllTaxGroups() {
         String sql = "select " + TAX_GROUP_MAPPER.getSchema();
-        return this.jdbcTemplate.query(sql, TAX_GROUP_MAPPER); // NOSONAR
+        return this.jdbcTemplate.query(
+                connection -> connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY),
+                TAX_GROUP_MAPPER);
     }
 
     @Override
