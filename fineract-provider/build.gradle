@@ -258,6 +258,8 @@ bootJar {
 
 jib {
     from {
+        // We are using this image because it contains fonts that makes pentaho reports exports in csv,Excell and other formats.
+        //TODO To get a lighter image that has fonts to make reports function as expected
         image = 'azul/zulu-openjdk:17'
         platforms {
             platform {
