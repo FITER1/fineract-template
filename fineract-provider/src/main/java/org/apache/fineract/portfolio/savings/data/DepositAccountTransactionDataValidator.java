@@ -74,7 +74,7 @@ public class DepositAccountTransactionDataValidator {
             Arrays.asList(DepositsApiConstants.localeParamName, DepositsApiConstants.dateFormatParamName, closedOnDateParamName,
                     DepositsApiConstants.noteParamName, onAccountClosureIdParamName, paymentTypeIdParamName,
                     transactionAccountNumberParamName, checkNumberParamName, routingCodeParamName, receiptNumberParamName,
-                    bankNumberParamName, DepositsApiConstants.transferDescriptionParamName, toSavingsAccountIdParamName));
+                    bankNumberParamName, DepositsApiConstants.transferDescriptionParamName, toSavingsAccountIdParamName,DepositsApiConstants.toChequeNumberParamName));
 
     private static final Set<String> DEPOSIT_ACCOUNT_PRE_MATURE_CALCULATION_REQUEST_DATA_PARAMETERS = new HashSet<>(
             Arrays.asList(DepositsApiConstants.localeParamName, DepositsApiConstants.dateFormatParamName, closedOnDateParamName));

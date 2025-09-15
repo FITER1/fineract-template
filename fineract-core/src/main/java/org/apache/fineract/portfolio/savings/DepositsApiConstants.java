@@ -198,6 +198,7 @@ public final class DepositsApiConstants {
     public static final String onAccountClosureIdParamName = "onAccountClosureId";
     public static final String transferDescriptionParamName = "transferDescription";
     public static final String toSavingsAccountIdParamName = "toSavingsAccountId";
+    public static final String toChequeNumberParamName = "chequeNumber";
     public static final String savingsAccounts = "savingsAccounts";
     public static final String maturityInstructionIdParamName = "maturityInstructionId";
     public static final String transferToSavingsIdParamName = "transferToSavingsId";
