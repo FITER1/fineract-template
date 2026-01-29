@@ -3,11 +3,11 @@ name: Fineract Docker build - MariaDB
 on:
   workflow_dispatch:
 
+
 permissions:
   contents: read
 
 jobs:
-  if: false
   build:
     runs-on: ubuntu-22.04
     env:
