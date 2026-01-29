@@ -16,51 +16,51 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-apply plugin: 'org.asciidoctor.jvm.convert'
-apply plugin: 'org.asciidoctor.jvm.pdf'
-apply plugin: 'org.asciidoctor.jvm.revealjs'
+//apply plugin: 'org.asciidoctor.jvm.convert'
+//apply plugin: 'org.asciidoctor.jvm.pdf'
+//apply plugin: 'org.asciidoctor.jvm.revealjs'
 // apply plugin: 'org.asciidoctor.jvm.epub'
 // apply plugin: 'org.asciidoctor.kindlegen.base'
 
-asciidoctorj {
-    version = '2.5.3'
+//asciidoctorj {
+//    version = '2.5.3'
+//
+//    attributes = [
+//        version: "${project.version}",
+//        generated: "${buildDir}/generated/asciidoc",
+//        imagesdir: "${projectDir}/src/docs/en/images",
+//        diagramsdir: "${projectDir}/src/docs/en/diagrams",
+//        years: '2015-2024',
+//        revnumber: "${project.version}".toString(),
+//        rootdir: "${rootDir}".toString(),
+//        baseurl: 'fineract.apache.org',
+//    ]
+//
+//    modules {
+//        pdf.version '1.6.2'
+//        diagram.version '2.2.1'
+//        epub.version '1.5.1'
+//        revealjs.version '4.1.0'
+//    }
+//
+//    fatalWarnings ~/include file not found|missing callout|image to embed not found or not readable/
+//    fatalWarnings missingIncludes()
+//}
 
-    attributes = [
-        version: "${project.version}",
-        generated: "${buildDir}/generated/asciidoc",
-        imagesdir: "${projectDir}/src/docs/en/images",
-        diagramsdir: "${projectDir}/src/docs/en/diagrams",
-        years: '2015-2024',
-        revnumber: "${project.version}".toString(),
-        rootdir: "${rootDir}".toString(),
-        baseurl: 'fineract.apache.org',
-    ]
-
-    modules {
-        pdf.version '1.6.2'
-        diagram.version '2.2.1'
-        epub.version '1.5.1'
-        revealjs.version '4.1.0'
-    }
-
-    fatalWarnings ~/include file not found|missing callout|image to embed not found or not readable/
-    fatalWarnings missingIncludes()
-}
-
-asciidoctor {
-    languages 'en'
-
-    baseDir 'src/docs'
-    sourceDir 'src/docs'
-    sources {
-        include('index.adoc')
-    }
-    outputDir 'build/docs/html'
-
-    logging.captureStandardError LogLevel.INFO
-
-    dependsOn(':fineract-client:clean', ':fineract-client:buildAsciidoc')
-}
+//asciidoctor {
+//    languages 'en'
+//
+//    baseDir 'src/docs'
+//    sourceDir 'src/docs'
+//    sources {
+//        include('index.adoc')
+//    }
+//    outputDir 'build/docs/html'
+//
+//    logging.captureStandardError LogLevel.INFO
+//
+//    dependsOn(':fineract-client:clean', ':fineract-client:buildAsciidoc')
+//}
 
 // asciidoctorEpub {
 //     languages 'en'
@@ -76,31 +76,31 @@ asciidoctor {
 //     dependsOn ':fineract-client:buildAsciidoc'
 // }
 
-asciidoctorPdf {
-    languages 'en'
-
-    baseDir 'src/docs'
-    sourceDir 'src/docs'
-    sources {
-        include('index.adoc')
-    }
-    outputDir 'build/docs/pdf'
-
-    logging.captureStandardError LogLevel.INFO
-
-    // TODO: @vidakovic prepare a nicer theme
-    // theme 'fineract-default'
-    // pdfThemes {
-    //     local 'fineract-default', {
-    //         themeDir = "$projectDir/src/resources/themes"
-    //     }
-    // }
-    // fontsDir "$projectDir/src/resources/fonts"
-    dependsOn(':fineract-client:clean', ':fineract-client:buildAsciidoc')
-}
+//asciidoctorPdf {
+//    languages 'en'
+//
+//    baseDir 'src/docs'
+//    sourceDir 'src/docs'
+//    sources {
+//        include('index.adoc')
+//    }
+//    outputDir 'build/docs/pdf'
+//
+//    logging.captureStandardError LogLevel.INFO
+//
+//    // TODO: @vidakovic prepare a nicer theme
+//    // theme 'fineract-default'
+//    // pdfThemes {
+//    //     local 'fineract-default', {
+//    //         themeDir = "$projectDir/src/resources/themes"
+//    //     }
+//    // }
+//    // fontsDir "$projectDir/src/resources/fonts"
+//    dependsOn(':fineract-client:clean', ':fineract-client:buildAsciidoc')
+//}
 
 task doc(type: Zip) {
-    dependsOn(asciidoctor, asciidoctorPdf)
+//    dependsOn(asciidoctor, asciidoctorPdf)
 
     into("fineract-${project.version}/html") {
         from("$buildDir/docs/html") {
