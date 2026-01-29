@@ -223,6 +223,7 @@ public class LoanProductData implements Serializable {
 
     private final EnumOptionData loanScheduleType;
     private final EnumOptionData loanScheduleProcessingType;
+    private final boolean isShariahCompliant;
 
     /**
      * Used when returning lookup information about loan product for dropdowns.
@@ -904,6 +905,184 @@ public class LoanProductData implements Serializable {
         this.loanScheduleTypeOptions = null;
         this.loanScheduleProcessingTypeOptions = null;
         this.enableAccrualActivityPosting = enableAccrualActivityPosting;
+        this.isShariahCompliant = false;
+    }
+
+    public LoanProductData(final Long id, final String name, final String shortName, final String description, final CurrencyData currency,
+            final BigDecimal principal, final BigDecimal minPrincipal, final BigDecimal maxPrincipal, final BigDecimal tolerance,
+            final Integer numberOfRepayments, final Integer minNumberOfRepayments, final Integer maxNumberOfRepayments,
+            final Integer repaymentEvery, final BigDecimal interestRatePerPeriod, final BigDecimal minInterestRatePerPeriod,
+            final BigDecimal maxInterestRatePerPeriod, final BigDecimal annualInterestRate, final EnumOptionData repaymentFrequencyType,
+            final EnumOptionData interestRateFrequencyType, final EnumOptionData amortizationType, final EnumOptionData interestType,
+            final EnumOptionData interestCalculationPeriodType, final Boolean allowPartialPeriodInterestCalculation, final Long fundId,
+            final String fundName, final String transactionProcessingStrategyCode, final String transactionProcessingStrategyName,
+            final Integer graceOnPrincipalPayment, final Integer recurringMoratoriumOnPrincipalPeriods,
+            final Integer graceOnInterestPayment, final Integer graceOnInterestCharged, final Collection<ChargeData> charges,
+            final EnumOptionData accountingType, final boolean includeInBorrowerCycle, boolean useBorrowerCycle, final LocalDate startDate,
+            final LocalDate closeDate, final String status, final String externalId,
+            Collection<LoanProductBorrowerCycleVariationData> principalVariations,
+            Collection<LoanProductBorrowerCycleVariationData> interestRateVariations,
+            Collection<LoanProductBorrowerCycleVariationData> numberOfRepaymentVariations, Boolean multiDisburseLoan,
+            Integer maxTrancheCount, BigDecimal outstandingLoanBalance, final Boolean disallowExpectedDisbursements,
+            final Boolean allowApprovedDisbursedAmountsOverApplied, final String overAppliedCalculationType,
+            final Integer overAppliedNumber, final Integer graceOnArrearsAgeing, final Integer overdueDaysForNPA,
+            final EnumOptionData daysInMonthType, final EnumOptionData daysInYearType, final boolean isInterestRecalculationEnabled,
+            final LoanProductInterestRecalculationData interestRecalculationData,
+            final Integer minimumDaysBetweenDisbursalAndFirstRepayment, boolean holdGuaranteeFunds,
+            final LoanProductGuaranteeData loanProductGuaranteeData, final BigDecimal principalThresholdForLastInstallment,
+            final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion, boolean canDefineInstallmentAmount,
+            Integer installmentAmountInMultiplesOf, LoanProductConfigurableAttributes allowAttributeOverrides,
+            boolean isLinkedToFloatingInterestRates, Integer floatingRateId, String floatingRateName, BigDecimal interestRateDifferential,
+            BigDecimal minDifferentialLendingRate, BigDecimal defaultDifferentialLendingRate, BigDecimal maxDifferentialLendingRate,
+            boolean isFloatingInterestRateCalculationAllowed, final boolean isVariableInstallmentsAllowed,
+            final Integer minimumGapBetweenInstallments, final Integer maximumGapBetweenInstallments,
+            final boolean syncExpectedWithDisbursementDate, final boolean canUseForTopup, final boolean isEqualAmortization,
+            Collection<RateData> rateOptions, Collection<RateData> rates, final boolean isRatesEnabled,
+            final BigDecimal fixedPrincipalPercentagePerInstallment, final Collection<DelinquencyBucketData> delinquencyBucketOptions,
+            final DelinquencyBucketData delinquencyBucket, final Integer dueDaysForRepaymentEvent,
+            final Integer overDueDaysForRepaymentEvent, final boolean enableDownPayment,
+            final BigDecimal disbursedAmountPercentageForDownPayment, final boolean enableAutoRepaymentForDownPayment,
+            final Collection<AdvancedPaymentData> paymentAllocation, final Collection<CreditAllocationData> creditAllocation,
+            final EnumOptionData repaymentStartDateType, final boolean enableInstallmentLevelDelinquency,
+            final EnumOptionData loanScheduleType, final EnumOptionData loanScheduleProcessingType, final Integer fixedLength,
+            final boolean enableAccrualActivityPosting, final boolean isShariahCompliant) {
+        this.id = id;
+        this.name = name;
+        this.shortName = shortName;
+        this.description = description;
+        this.currency = currency;
+        this.principal = principal;
+        this.minPrincipal = minPrincipal;
+        this.maxPrincipal = maxPrincipal;
+        this.inArrearsTolerance = tolerance;
+        this.numberOfRepayments = numberOfRepayments;
+        this.minNumberOfRepayments = minNumberOfRepayments;
+        this.maxNumberOfRepayments = maxNumberOfRepayments;
+        this.graceOnPrincipalPayment = graceOnPrincipalPayment;
+        this.recurringMoratoriumOnPrincipalPeriods = recurringMoratoriumOnPrincipalPeriods;
+        this.graceOnInterestPayment = graceOnInterestPayment;
+        this.graceOnInterestCharged = graceOnInterestCharged;
+        this.repaymentEvery = repaymentEvery;
+        this.fixedLength = fixedLength;
+        this.interestRatePerPeriod = interestRatePerPeriod;
+        this.minInterestRatePerPeriod = minInterestRatePerPeriod;
+        this.maxInterestRatePerPeriod = maxInterestRatePerPeriod;
+        this.annualInterestRate = annualInterestRate;
+        this.isLinkedToFloatingInterestRates = isLinkedToFloatingInterestRates;
+        this.floatingRateId = floatingRateId;
+        this.floatingRateName = floatingRateName;
+        this.interestRateDifferential = interestRateDifferential;
+        this.minDifferentialLendingRate = minDifferentialLendingRate;
+        this.defaultDifferentialLendingRate = defaultDifferentialLendingRate;
+        this.maxDifferentialLendingRate = maxDifferentialLendingRate;
+        this.isFloatingInterestRateCalculationAllowed = isFloatingInterestRateCalculationAllowed;
+        this.allowVariableInstallments = isVariableInstallmentsAllowed;
+        this.minimumGap = minimumGapBetweenInstallments;
+        this.maximumGap = maximumGapBetweenInstallments;
+        this.repaymentFrequencyType = repaymentFrequencyType;
+        this.interestRateFrequencyType = interestRateFrequencyType;
+        this.amortizationType = amortizationType;
+        this.interestType = interestType;
+        this.interestCalculationPeriodType = interestCalculationPeriodType;
+        this.allowPartialPeriodInterestCalculation = allowPartialPeriodInterestCalculation;
+        this.fundId = fundId;
+        this.fundName = fundName;
+        this.transactionProcessingStrategyCode = transactionProcessingStrategyCode;
+        this.transactionProcessingStrategyName = transactionProcessingStrategyName;
+        this.charges = charges;
+        this.accountingRule = accountingType;
+        this.includeInBorrowerCycle = includeInBorrowerCycle;
+        this.useBorrowerCycle = useBorrowerCycle;
+        this.startDate = startDate;
+        this.closeDate = closeDate;
+        this.status = status;
+        this.externalId = externalId;
+        this.minimumDaysBetweenDisbursalAndFirstRepayment = minimumDaysBetweenDisbursalAndFirstRepayment;
+        this.rateOptions = rateOptions;
+        this.rates = rates;
+        this.isRatesEnabled = isRatesEnabled;
+
+        this.chargeOptions = null;
+        this.penaltyOptions = null;
+        this.paymentTypeOptions = null;
+        this.currencyOptions = null;
+        this.fundOptions = null;
+        this.transactionProcessingStrategyOptions = null;
+        this.amortizationTypeOptions = null;
+        this.interestTypeOptions = null;
+        this.interestCalculationPeriodTypeOptions = null;
+        this.repaymentFrequencyTypeOptions = null;
+        this.interestRateFrequencyTypeOptions = null;
+        this.floatingRateOptions = null;
+
+        this.accountingMappingOptions = null;
+        this.accountingRuleOptions = null;
+        this.accountingMappings = null;
+        this.paymentChannelToFundSourceMappings = null;
+        this.feeToIncomeAccountMappings = null;
+        this.penaltyToIncomeAccountMappings = null;
+        this.valueConditionTypeOptions = null;
+        this.principalVariationsForBorrowerCycle = principalVariations;
+        this.interestRateVariationsForBorrowerCycle = interestRateVariations;
+        this.numberOfRepaymentVariationsForBorrowerCycle = numberOfRepaymentVariations;
+        this.multiDisburseLoan = multiDisburseLoan;
+        this.outstandingLoanBalance = outstandingLoanBalance;
+        this.maxTrancheCount = maxTrancheCount;
+        this.disallowExpectedDisbursements = disallowExpectedDisbursements;
+        this.allowApprovedDisbursedAmountsOverApplied = allowApprovedDisbursedAmountsOverApplied;
+        this.overAppliedCalculationType = overAppliedCalculationType;
+        this.overAppliedNumber = overAppliedNumber;
+
+        this.graceOnArrearsAgeing = graceOnArrearsAgeing;
+        this.overdueDaysForNPA = overdueDaysForNPA;
+        this.daysInMonthType = daysInMonthType;
+        this.daysInYearType = daysInYearType;
+        this.isInterestRecalculationEnabled = isInterestRecalculationEnabled;
+        this.interestRecalculationData = interestRecalculationData;
+        this.holdGuaranteeFunds = holdGuaranteeFunds;
+        this.productGuaranteeData = loanProductGuaranteeData;
+        this.principalThresholdForLastInstallment = principalThresholdForLastInstallment;
+        this.fixedPrincipalPercentagePerInstallment = fixedPrincipalPercentagePerInstallment;
+        this.accountMovesOutOfNPAOnlyOnArrearsCompletion = accountMovesOutOfNPAOnlyOnArrearsCompletion;
+        this.allowAttributeOverrides = allowAttributeOverrides;
+
+        this.daysInMonthTypeOptions = null;
+        this.daysInYearTypeOptions = null;
+        this.interestRecalculationCompoundingTypeOptions = null;
+        this.rescheduleStrategyTypeOptions = null;
+        this.interestRecalculationFrequencyTypeOptions = null;
+        this.interestRecalculationNthDayTypeOptions = null;
+        this.interestRecalculationDayOfWeekTypeOptions = null;
+
+        this.canDefineInstallmentAmount = canDefineInstallmentAmount;
+        this.installmentAmountInMultiplesOf = installmentAmountInMultiplesOf;
+        this.preClosureInterestCalculationStrategyOptions = null;
+        this.syncExpectedWithDisbursementDate = syncExpectedWithDisbursementDate;
+        this.canUseForTopup = canUseForTopup;
+        this.isEqualAmortization = isEqualAmortization;
+        this.delinquencyBucketOptions = delinquencyBucketOptions;
+        this.delinquencyBucket = delinquencyBucket;
+        this.dueDaysForRepaymentEvent = dueDaysForRepaymentEvent;
+        this.overDueDaysForRepaymentEvent = overDueDaysForRepaymentEvent;
+        this.enableDownPayment = enableDownPayment;
+        this.disbursedAmountPercentageForDownPayment = disbursedAmountPercentageForDownPayment;
+        this.paymentAllocation = paymentAllocation;
+        this.creditAllocation = creditAllocation;
+        this.enableAutoRepaymentForDownPayment = enableAutoRepaymentForDownPayment;
+        this.repaymentStartDateType = repaymentStartDateType;
+        this.repaymentStartDateTypeOptions = null;
+        this.advancedPaymentAllocationTransactionTypes = PaymentAllocationTransactionType.getValuesAsEnumOptionDataList();
+        this.advancedPaymentAllocationFutureInstallmentAllocationRules = FutureInstallmentAllocationRule.getValuesAsEnumOptionDataList();
+        this.advancedPaymentAllocationTypes = PaymentAllocationType.getValuesAsEnumOptionDataList();
+        this.creditAllocationTransactionTypes = CreditAllocationTransactionType.getValuesAsEnumOptionDataList();
+        this.creditAllocationAllocationTypes = AllocationType.getValuesAsEnumOptionDataList();
+        this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
+        this.loanScheduleType = loanScheduleType;
+        this.loanScheduleProcessingType = loanScheduleProcessingType;
+        this.loanScheduleTypeOptions = null;
+        this.loanScheduleProcessingTypeOptions = null;
+        this.enableAccrualActivityPosting = enableAccrualActivityPosting;
+        this.isShariahCompliant = isShariahCompliant;
     }
 
     public LoanProductData(final LoanProductData productData, final Collection<ChargeData> chargeOptions,
@@ -1080,6 +1259,7 @@ public class LoanProductData implements Serializable {
         this.loanScheduleProcessingTypeOptions = loanScheduleProcessingTypeOptions;
         this.loanScheduleTypeOptions = loanScheduleTypeOptions;
         this.enableAccrualActivityPosting = productData.enableAccrualActivityPosting;
+        this.isShariahCompliant = productData.isShariahCompliant;
     }
 
     private Collection<ChargeData> nullIfEmpty(final Collection<ChargeData> charges) {
