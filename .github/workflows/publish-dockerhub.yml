@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build:
+    if: false
     runs-on: ubuntu-22.04
     env:
       GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GE_ACCESS_TOKEN }}
