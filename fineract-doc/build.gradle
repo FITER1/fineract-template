@@ -100,7 +100,7 @@
 //}
 
 task doc(type: Zip) {
-//    dependsOn(asciidoctor, asciidoctorPdf)
+    //    dependsOn(asciidoctor, asciidoctorPdf)
 
     into("fineract-${project.version}/html") {
         from("$buildDir/docs/html") {
