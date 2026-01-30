@@ -164,4 +164,5 @@
     <include file="parts/0142_add_accrual_activity_transaction.xml" relativeToChangelogFile="true" />
     <include file="parts/0132_create_table_app_images.xml" relativeToChangelogFile="true" />
     <include file="parts/0133_create_table_contact_info.xml" relativeToChangelogFile="true" />
+    <include file="parts/0143_add_filed_is_shariah_complient.xml" relativeToChangelogFile="true" />
 </databaseChangeLog>

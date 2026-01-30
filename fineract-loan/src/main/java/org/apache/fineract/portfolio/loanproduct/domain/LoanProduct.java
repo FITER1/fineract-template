@@ -232,10 +232,13 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
     @Column(name = "repayment_start_date_type_enum", nullable = false)
     private RepaymentStartDateType repaymentStartDateType;
 
+    @Column(name = "is_shariah_compliant")
+    private boolean isShariahCompliant;
+
     public static LoanProduct assembleFromJson(final Fund fund, final String loanTransactionProcessingStrategy,
             final List<Charge> productCharges, final JsonCommand command, final AprCalculator aprCalculator, FloatingRate floatingRate,
             final List<Rate> productRates, List<LoanProductPaymentAllocationRule> loanProductPaymentAllocationRules,
-            List<LoanProductCreditAllocationRule> loanProductCreditAllocationRules) {
+            List<LoanProductCreditAllocationRule> loanProductCreditAllocationRules, final boolean isShariahCompliant) {
 
         final String name = command.stringValueOfParameterNamed("name");
         final String shortName = command.stringValueOfParameterNamed(LoanProductConstants.SHORT_NAME);
@@ -461,7 +464,7 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
                 allowApprovedDisbursedAmountsOverApplied, overAppliedCalculationType, overAppliedNumber, dueDaysForRepaymentEvent,
                 overDueDaysForRepaymentEvent, enableDownPayment, disbursedAmountPercentageDownPayment, enableAutoRepaymentForDownPayment,
                 repaymentStartDateType, enableInstallmentLevelDelinquency, loanScheduleType, loanScheduleProcessingType, fixedLength,
-                enableAccrualActivityPosting);
+                enableAccrualActivityPosting, isShariahCompliant);
 
     }
 
@@ -781,6 +784,150 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
         this.repaymentStartDateType = repaymentStartDateType;
 
         this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
+        this.isShariahCompliant = false;
+
+        validateLoanProductPreSave();
+    }
+
+    public LoanProduct(final Fund fund, final String transactionProcessingStrategyCode,
+            final List<LoanProductPaymentAllocationRule> paymentAllocationRules,
+            final List<LoanProductCreditAllocationRule> creditAllocationRules, final String name, final String shortName,
+            final String description, final MonetaryCurrency currency, final BigDecimal defaultPrincipal,
+            final BigDecimal defaultMinPrincipal, final BigDecimal defaultMaxPrincipal,
+            final BigDecimal defaultNominalInterestRatePerPeriod, final BigDecimal defaultMinNominalInterestRatePerPeriod,
+            final BigDecimal defaultMaxNominalInterestRatePerPeriod, final PeriodFrequencyType interestPeriodFrequencyType,
+            final BigDecimal defaultAnnualNominalInterestRate, final InterestMethod interestMethod,
+            final InterestCalculationPeriodMethod interestCalculationPeriodMethod, final boolean considerPartialPeriodInterest,
+            final Integer repayEvery, final PeriodFrequencyType repaymentFrequencyType, final Integer defaultNumberOfInstallments,
+            final Integer defaultMinNumberOfInstallments, final Integer defaultMaxNumberOfInstallments,
+            final Integer graceOnPrincipalPayment, final Integer recurringMoratoriumOnPrincipalPeriods,
+            final Integer graceOnInterestPayment, final Integer graceOnInterestCharged, final AmortizationMethod amortizationMethod,
+            final BigDecimal inArrearsTolerance, final List<Charge> charges, final AccountingRuleType accountingRuleType,
+            final boolean includeInBorrowerCycle, final LocalDate startDate, final LocalDate closeDate, final ExternalId externalId,
+            final boolean useBorrowerCycle, final Set<LoanProductBorrowerCycleVariations> loanProductBorrowerCycleVariations,
+            final boolean multiDisburseLoan, final Integer maxTrancheCount, final BigDecimal outstandingLoanBalance,
+            final Integer graceOnArrearsAgeing, final Integer overdueDaysForNPA, final DaysInMonthType daysInMonthType,
+            final DaysInYearType daysInYearType, final boolean isInterestRecalculationEnabled,
+            final LoanProductInterestRecalculationDetails productInterestRecalculationDetails,
+            final Integer minimumDaysBetweenDisbursalAndFirstRepayment, final boolean holdGuarantorFunds,
+            final LoanProductGuaranteeDetails loanProductGuaranteeDetails, final BigDecimal principalThresholdForLastInstallment,
+            final boolean accountMovesOutOfNPAOnlyOnArrearsCompletion, final boolean canDefineEmiAmount,
+            final Integer installmentAmountInMultiplesOf, final LoanProductConfigurableAttributes loanProductConfigurableAttributes,
+            Boolean isLinkedToFloatingInterestRates, FloatingRate floatingRate, BigDecimal interestRateDifferential,
+            BigDecimal minDifferentialLendingRate, BigDecimal maxDifferentialLendingRate, BigDecimal defaultDifferentialLendingRate,
+            Boolean isFloatingInterestRateCalculationAllowed, final Boolean isVariableInstallmentsAllowed,
+            final Integer minimumGapBetweenInstallments, final Integer maximumGapBetweenInstallments,
+            final boolean syncExpectedWithDisbursementDate, final boolean canUseForTopup, final boolean isEqualAmortization,
+            final List<Rate> rates, final BigDecimal fixedPrincipalPercentagePerInstallment, final boolean disallowExpectedDisbursements,
+            final boolean allowApprovedDisbursedAmountsOverApplied, final String overAppliedCalculationType,
+            final Integer overAppliedNumber, final Integer dueDaysForRepaymentEvent, final Integer overDueDaysForRepaymentEvent,
+            final boolean enableDownPayment, final BigDecimal disbursedAmountPercentageForDownPayment,
+            final boolean enableAutoRepaymentForDownPayment, final RepaymentStartDateType repaymentStartDateType,
+            final boolean enableInstallmentLevelDelinquency, final LoanScheduleType loanScheduleType,
+            final LoanScheduleProcessingType loanScheduleProcessingType, final Integer fixedLength,
+            final boolean enableAccrualActivityPosting, final boolean isShariahCompliant) {
+        this.fund = fund;
+        this.transactionProcessingStrategyCode = transactionProcessingStrategyCode;
+
+        this.paymentAllocationRules = paymentAllocationRules;
+        if (this.paymentAllocationRules != null) {
+            for (LoanProductPaymentAllocationRule loanProductPaymentAllocationRule : this.paymentAllocationRules) {
+                loanProductPaymentAllocationRule.setLoanProduct(this);
+            }
+        }
+
+        this.creditAllocationRules = creditAllocationRules;
+        if (this.creditAllocationRules != null) {
+            for (LoanProductCreditAllocationRule loanProductCreditAllocationRule : this.creditAllocationRules) {
+                loanProductCreditAllocationRule.setLoanProduct(this);
+            }
+        }
+
+        this.name = name.trim();
+        this.shortName = shortName.trim();
+        if (StringUtils.isNotBlank(description)) {
+            this.description = description.trim();
+        } else {
+            this.description = null;
+        }
+
+        if (charges != null) {
+            this.charges = charges;
+        }
+
+        this.isLinkedToFloatingInterestRate = isLinkedToFloatingInterestRates != null && isLinkedToFloatingInterestRates;
+        if (isLinkedToFloatingInterestRate) {
+            this.floatingRates = new LoanProductFloatingRates(floatingRate, this, interestRateDifferential, minDifferentialLendingRate,
+                    maxDifferentialLendingRate, defaultDifferentialLendingRate, isFloatingInterestRateCalculationAllowed);
+        }
+
+        this.allowVariabeInstallments = isVariableInstallmentsAllowed != null && isVariableInstallmentsAllowed;
+
+        if (allowVariabeInstallments) {
+            this.variableInstallmentConfig = new LoanProductVariableInstallmentConfig(this, minimumGapBetweenInstallments,
+                    maximumGapBetweenInstallments);
+        }
+
+        this.loanProductRelatedDetail = new LoanProductRelatedDetail(currency, defaultPrincipal, defaultNominalInterestRatePerPeriod,
+                interestPeriodFrequencyType, defaultAnnualNominalInterestRate, interestMethod, interestCalculationPeriodMethod,
+                considerPartialPeriodInterest, repayEvery, repaymentFrequencyType, defaultNumberOfInstallments, graceOnPrincipalPayment,
+                recurringMoratoriumOnPrincipalPeriods, graceOnInterestPayment, graceOnInterestCharged, amortizationMethod,
+                inArrearsTolerance, graceOnArrearsAgeing, daysInMonthType.getValue(), daysInYearType.getValue(),
+                isInterestRecalculationEnabled, isEqualAmortization, enableDownPayment, disbursedAmountPercentageForDownPayment,
+                enableAutoRepaymentForDownPayment, loanScheduleType, loanScheduleProcessingType, fixedLength, enableAccrualActivityPosting);
+
+        this.loanProductMinMaxConstraints = new LoanProductMinMaxConstraints(defaultMinPrincipal, defaultMaxPrincipal,
+                defaultMinNominalInterestRatePerPeriod, defaultMaxNominalInterestRatePerPeriod, defaultMinNumberOfInstallments,
+                defaultMaxNumberOfInstallments);
+
+        if (accountingRuleType != null) {
+            this.accountingRule = accountingRuleType.getValue();
+        }
+        this.includeInBorrowerCycle = includeInBorrowerCycle;
+        this.useBorrowerCycle = useBorrowerCycle;
+
+        this.startDate = startDate;
+        this.closeDate = closeDate;
+
+        this.externalId = externalId;
+        this.borrowerCycleVariations = loanProductBorrowerCycleVariations;
+        for (LoanProductBorrowerCycleVariations borrowerCycleVariations : this.borrowerCycleVariations) {
+            borrowerCycleVariations.updateLoanProduct(this);
+        }
+        if (loanProductConfigurableAttributes != null) {
+            this.loanConfigurableAttributes = loanProductConfigurableAttributes;
+            loanConfigurableAttributes.updateLoanProduct(this);
+        }
+
+        this.loanProductTrancheDetails = new LoanProductTrancheDetails(multiDisburseLoan, maxTrancheCount, outstandingLoanBalance);
+        this.overdueDaysForNPA = overdueDaysForNPA;
+        this.productInterestRecalculationDetails = productInterestRecalculationDetails;
+        this.minimumDaysBetweenDisbursalAndFirstRepayment = minimumDaysBetweenDisbursalAndFirstRepayment;
+        this.holdGuaranteeFunds = holdGuarantorFunds;
+        this.loanProductGuaranteeDetails = loanProductGuaranteeDetails;
+        this.principalThresholdForLastInstallment = principalThresholdForLastInstallment;
+        this.accountMovesOutOfNPAOnlyOnArrearsCompletion = accountMovesOutOfNPAOnlyOnArrearsCompletion;
+        this.canDefineInstallmentAmount = canDefineEmiAmount;
+        this.installmentAmountInMultiplesOf = installmentAmountInMultiplesOf;
+        this.syncExpectedWithDisbursementDate = syncExpectedWithDisbursementDate;
+        this.canUseForTopup = canUseForTopup;
+        this.fixedPrincipalPercentagePerInstallment = fixedPrincipalPercentagePerInstallment;
+
+        this.disallowExpectedDisbursements = disallowExpectedDisbursements;
+        this.allowApprovedDisbursedAmountsOverApplied = allowApprovedDisbursedAmountsOverApplied;
+        this.overAppliedCalculationType = overAppliedCalculationType;
+        this.overAppliedNumber = overAppliedNumber;
+
+        if (rates != null) {
+            this.rates = rates;
+        }
+
+        this.dueDaysForRepaymentEvent = dueDaysForRepaymentEvent;
+        this.overDueDaysForRepaymentEvent = overDueDaysForRepaymentEvent;
+        this.repaymentStartDateType = repaymentStartDateType;
+
+        this.enableInstallmentLevelDelinquency = enableInstallmentLevelDelinquency;
+        this.isShariahCompliant = isShariahCompliant;
 
         validateLoanProductPreSave();
     }
@@ -1302,6 +1449,14 @@ public class LoanProduct extends AbstractPersistableCustom<Long> {
             actualChanges.put(LoanProductConstants.OVER_DUE_DAYS_FOR_REPAYMENT_EVENT, newValue);
             actualChanges.put("locale", localeAsInput);
             this.overDueDaysForRepaymentEvent = newValue;
+        }
+
+        if (command.hasParameter("isShariahCompliant")) {
+
+            if (command.isChangeInBooleanParameterNamed("isShariahCompliant", this.isShariahCompliant)) {
+                final boolean newValue = command.booleanPrimitiveValueOfParameterNamed("isShariahCompliant");
+                this.isShariahCompliant = newValue;
+            }
         }
 
         if (command.isChangeInBooleanParameterNamed(LoanProductConstants.ENABLE_DOWN_PAYMENT,

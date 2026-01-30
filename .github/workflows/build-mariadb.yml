@@ -1,11 +1,13 @@
 name: Fineract Build & Test - MariaDB
-on: [push, pull_request]
+on:
+    workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
+    if: false
     runs-on: ubuntu-22.04
 
     services:

@@ -80,7 +80,7 @@ public class UserStepDef extends AbstractStepDef {
                 .repeatPassword(apiProperties.getPassword()) //
                 .roles(List.of(roleId));
 
-        Response<PostUsersResponse> createUserResponse = usersApi.create15(postUsersRequest).execute();
+        Response<PostUsersResponse> createUserResponse = usersApi.create16(postUsersRequest).execute();
         ErrorHelper.checkSuccessfulApiCall(createUserResponse);
         testContext().set(TestContextKey.CREATED_SIMPLE_USER_RESPONSE, createUserResponse);
     }
