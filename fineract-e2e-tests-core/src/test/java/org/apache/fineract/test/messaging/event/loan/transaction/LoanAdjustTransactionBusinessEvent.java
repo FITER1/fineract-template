@@ -31,7 +31,7 @@ public class LoanAdjustTransactionBusinessEvent implements Event<LoanTransaction
 
     @Override
     public Function<LoanTransactionAdjustmentDataV1, Long> getIdExtractor() {
-        return loanTransactionAdjustmentDataV1 -> (Long) loanTransactionAdjustmentDataV1.getTransactionToAdjust().getId();
+        return loanTransactionAdjustmentDataV1 -> loanTransactionAdjustmentDataV1.getTransactionToAdjust().getId();
     }
 
     @Override
