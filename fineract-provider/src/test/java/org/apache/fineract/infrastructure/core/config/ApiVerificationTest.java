@@ -35,9 +35,7 @@ public class ApiVerificationTest extends AbstractSpringTest {
     @Autowired
     private JerseyConfig jerseyConfig;
 
-    private static final Set<String> ALLOWED_EXCEPTIONS = Set.of(
-            "ContactInfoAPIResource"
-    );
+    private static final Set<String> ALLOWED_EXCEPTIONS = Set.of("ContactInfoAPIResource");
 
     @Test
     public void testAllApiClassesAreNamedAsApiResource() {

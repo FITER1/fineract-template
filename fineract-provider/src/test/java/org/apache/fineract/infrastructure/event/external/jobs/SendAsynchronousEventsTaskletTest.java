@@ -28,8 +28,6 @@ import static org.mockito.Mockito.when;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,23 +87,15 @@ class SendAsynchronousEventsTaskletTest {
 
     @BeforeEach
     public void setUp() {
-        ThreadLocalContextUtil.setTenant(
-                new FineractPlatformTenant(1L, "default", "Default", "Asia/Kolkata", null));
+        ThreadLocalContextUtil.setTenant(new FineractPlatformTenant(1L, "default", "Default", "Asia/Kolkata", null));
         ThreadLocalContextUtil.setActionContext(ActionContext.DEFAULT);
-        ThreadLocalContextUtil.setBusinessDates(
-                new HashMap<>(Map.of(BusinessDateType.BUSINESS_DATE,
-                        LocalDate.now(ZoneId.systemDefault()))));
+        ThreadLocalContextUtil
+                .setBusinessDates(new HashMap<>(Map.of(BusinessDateType.BUSINESS_DATE, LocalDate.now(ZoneId.systemDefault()))));
 
         configureExternalEventsProducerReadBatchSizeProperty();
 
-        underTest = new SendAsynchronousEventsTasklet(
-                fineractProperties,
-                repository,
-                eventProducer,
-                messageFactory,
-                byteBufferConverter,
-                configurationDomainService
-        );
+        underTest = new SendAsynchronousEventsTasklet(fineractProperties, repository, eventProducer, messageFactory, byteBufferConverter,
+                configurationDomainService);
     }
 
     @AfterEach
@@ -114,14 +104,10 @@ class SendAsynchronousEventsTaskletTest {
     }
 
     private void configureExternalEventsProducerReadBatchSizeProperty() {
-        FineractProperties.FineractEventsProperties eventsProperties =
-                new FineractProperties.FineractEventsProperties();
-        FineractProperties.FineractExternalEventsProperties externalProperties =
-                new FineractProperties.FineractExternalEventsProperties();
-        FineractProperties.FineractExternalEventsProducerProperties producerProperties =
-                new FineractProperties.FineractExternalEventsProducerProperties();
-        FineractProperties.FineractExternalEventsProducerJmsProperties jmsProperties =
-                new FineractProperties.FineractExternalEventsProducerJmsProperties();
+        FineractProperties.FineractEventsProperties eventsProperties = new FineractProperties.FineractEventsProperties();
+        FineractProperties.FineractExternalEventsProperties externalProperties = new FineractProperties.FineractExternalEventsProperties();
+        FineractProperties.FineractExternalEventsProducerProperties producerProperties = new FineractProperties.FineractExternalEventsProducerProperties();
+        FineractProperties.FineractExternalEventsProducerJmsProperties jmsProperties = new FineractProperties.FineractExternalEventsProducerJmsProperties();
 
         jmsProperties.setEnabled(true);
         producerProperties.setJms(jmsProperties);
@@ -140,10 +126,8 @@ class SendAsynchronousEventsTaskletTest {
 
     @Test
     public void givenBatchSize2WhenTaskExecutionThenSend2Events() throws Exception {
-        List<ExternalEventView> events = List.of(
-                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L),
-                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L)
-        );
+        List<ExternalEventView> events = List.of(createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L),
+                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L));
 
         when(repository.findByStatusOrderById(Mockito.any(), Mockito.any())).thenReturn(events);
         when(messageFactory.createMessage(Mockito.any())).thenReturn(createDummyMessage());
@@ -152,25 +136,19 @@ class SendAsynchronousEventsTaskletTest {
         resultStatus = underTest.execute(stepContribution, chunkContext);
 
         verify(eventProducer).sendEvents(Mockito.any());
-        verify(repository).markEventsSent(
-                Mockito.eq(events.stream().map(ExternalEventView::getId).toList()),
-                Mockito.any()
-        );
+        verify(repository).markEventsSent(Mockito.eq(events.stream().map(ExternalEventView::getId).toList()), Mockito.any());
         assertEquals(RepeatStatus.FINISHED, resultStatus);
     }
 
     @Test
     public void givenBatchSize2WhenEventSendFailsThenExecutionStops() throws Exception {
-        List<ExternalEventView> events = List.of(
-                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L),
-                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L)
-        );
+        List<ExternalEventView> events = List.of(createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L),
+                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L));
 
         when(repository.findByStatusOrderById(Mockito.any(), Mockito.any())).thenReturn(events);
         when(messageFactory.createMessage(Mockito.any())).thenReturn(createDummyMessage());
         when(byteBufferConverter.convert(Mockito.any(ByteBuffer.class))).thenReturn(new byte[0]);
-        doThrow(new AcknowledgementTimeoutException("fail", new RuntimeException()))
-                .when(eventProducer).sendEvents(Mockito.any());
+        doThrow(new AcknowledgementTimeoutException("fail", new RuntimeException())).when(eventProducer).sendEvents(Mockito.any());
 
         resultStatus = underTest.execute(stepContribution, chunkContext);
 
@@ -180,9 +158,7 @@ class SendAsynchronousEventsTaskletTest {
 
     @Test
     public void givenOneEventWhenEventSentThenEventStatusUpdates() throws Exception {
-        List<ExternalEventView> events = List.of(
-                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L)
-        );
+        List<ExternalEventView> events = List.of(createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", 1L));
 
         when(repository.findByStatusOrderById(Mockito.any(), Mockito.any())).thenReturn(events);
         when(messageFactory.createMessage(Mockito.any())).thenReturn(createDummyMessage());
@@ -191,18 +167,13 @@ class SendAsynchronousEventsTaskletTest {
         resultStatus = underTest.execute(stepContribution, chunkContext);
 
         verify(eventProducer).sendEvents(Mockito.any());
-        verify(repository).markEventsSent(
-                Mockito.eq(events.stream().map(ExternalEventView::getId).toList()),
-                Mockito.any()
-        );
+        verify(repository).markEventsSent(Mockito.eq(events.stream().map(ExternalEventView::getId).toList()), Mockito.any());
         assertEquals(RepeatStatus.FINISHED, resultStatus);
     }
 
     @Test
     public void testExecuteShouldHandleNullAggregateId() throws Exception {
-        List<ExternalEventView> events = List.of(
-                createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", null)
-        );
+        List<ExternalEventView> events = List.of(createExternalEventView("aType", "aCategory", "aSchema", new byte[0], "key", null));
 
         byte[] payload = new byte[0];
 
@@ -213,18 +184,14 @@ class SendAsynchronousEventsTaskletTest {
         resultStatus = underTest.execute(stepContribution, chunkContext);
 
         verify(eventProducer).sendEvents(Map.of(-1L, List.of(payload)));
-        verify(repository).markEventsSent(
-                Mockito.eq(events.stream().map(ExternalEventView::getId).toList()),
-                Mockito.any()
-        );
+        verify(repository).markEventsSent(Mockito.eq(events.stream().map(ExternalEventView::getId).toList()), Mockito.any());
         assertEquals(RepeatStatus.FINISHED, resultStatus);
     }
 
     @Test
     public void givenEventBatchSizeIsConfiguredAs10WhenTaskExecutionThenEventReadPageSizeIsCorrect() {
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(repository.findByStatusOrderById(Mockito.any(), Mockito.any()))
-                .thenReturn(List.of());
+        when(repository.findByStatusOrderById(Mockito.any(), Mockito.any())).thenReturn(List.of());
 
         resultStatus = underTest.execute(stepContribution, chunkContext);
 
@@ -237,23 +204,12 @@ class SendAsynchronousEventsTaskletTest {
     // -------------------------------------------------------------------------
 
     private MessageV1 createDummyMessage() {
-        return new MessageV1(
-                1,
-                "aSource",
-                "aType",
-                "nocategory",
-                "aCreateDate",
-                "aBusinessDate",
-                "aTenantId",
-                "anidempotencyKey",
-                "aSchema",
-                ByteBuffer.wrap(new byte[0])
-        );
+        return new MessageV1(1, "aSource", "aType", "nocategory", "aCreateDate", "aBusinessDate", "aTenantId", "anidempotencyKey",
+                "aSchema", ByteBuffer.wrap(new byte[0]));
     }
 
-    private ExternalEventView createExternalEventView(
-            String type, String category, String schema,
-            byte[] data, String idempotencyKey, Long aggregateRootId) {
+    private ExternalEventView createExternalEventView(String type, String category, String schema, byte[] data, String idempotencyKey,
+            Long aggregateRootId) {
 
         ExternalEventView view = Mockito.mock(ExternalEventView.class);
         when(view.getId()).thenReturn(rnd.nextLong());
@@ -266,4 +222,3 @@ class SendAsynchronousEventsTaskletTest {
         return view;
     }
 }
-
